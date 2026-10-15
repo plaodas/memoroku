@@ -37,3 +37,15 @@ Android ウィジェットは [plugins/native/android/widgets/MemoWidget.kt](plu
 タップと完了通知は `memoroku://memo/{id}` でそのメモを開きます。通知は `expo-notifications` のローカル通知です。
 
 24時間を過ぎたメモを消したとき、表示中のメモが無ければウィジェットの文も空にします。
+
+## Windows へ移したあとの作業
+
+作業コピーは GitHub から Windows のディスク（`C:\` 配下）へ clone したものです。WSL の `/home/agake/memoroku` と `\\wsl$\` では続けません。`node_modules` は Windows 側で `npm install` します。
+
+Android の確認は Windows の Android Studio で行います。`npx expo run:android` で development build を作り、API 31 以降のエミュレータか実機に載せます。ウィジェットとネイティブ録音があるため、Expo Go では動きません。
+
+minutes を WSL で動かすとき、エミュレータから見たホストは `10.0.2.2` です。設定画面のサーバー URL は、そのアドレスと minutes の公開ポートにします。
+
+iOS はソースの実装だけ進めます。Windows では `expo run:ios` と `pod install` は実行しません。ウィジェット、録音、通知の実機確認は、Mac と iPhone が揃ってから行います。
+
+改行コードは LF のままにします。Windows の `core.autocrlf` で `gradlew` を CRLF に変換しません。
