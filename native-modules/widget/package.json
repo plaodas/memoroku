@@ -1,0 +1,14 @@
+{
+  "name": "memoroku-widget",
+  "version": "1.0.0",
+  "description": "Writes the latest memo into the Android home screen widget",
+  "main": "index.ts",
+  "license": "MIT",
+  "author": "memoroku",
+  "homepage": "https://github.com/memoroku/memoroku",
+  "peerDependencies": {
+    "expo": "*",
+    "react": "*",
+    "react-native": "*"
+  }
+}

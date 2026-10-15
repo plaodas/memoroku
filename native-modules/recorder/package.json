@@ -1,0 +1,14 @@
+{
+  "name": "memoroku-recorder",
+  "version": "1.0.0",
+  "description": "Native audio recorder for Memoroku",
+  "main": "index.ts",
+  "license": "MIT",
+  "author": "memoroku",
+  "homepage": "https://github.com/memoroku/memoroku",
+  "peerDependencies": {
+    "expo": "*",
+    "react": "*",
+    "react-native": "*"
+  }
+}

@@ -1,0 +1,4 @@
+<resources>
+  <string name="app_name">memoroku</string>
+  <string name="memo_widget_description">Latest memoroku memo</string>
+</resources>
