@@ -2,7 +2,7 @@
 
 短い録音メモのスマホアプリです。録音を端末に残し、minutes に送って文字起こしし、できた短い文をホーム画面のウィジェットに出します。
 
-話者分け、要約、Word 出力は使いません。文字起こし API は別リポジトリの minutes です。
+文字起こしのバックエンドは [minutes](https://github.com/plaodas/minutes) です。このリポジトリにはスマホアプリだけを置きます。話者分け、要約、Word 出力は呼びません。
 
 プロダクトの約束は [docs/promises.md](docs/promises.md) です。
 
@@ -21,7 +21,7 @@
 
 - Node.js 20.19 以降、22.13 以降、24.3 以降、または 25 以降
 - Android Studio。SDK は API 31 以降。確認は API 31 以降のエミュレータか実機
-- minutes。WSL で動かすとき、エミュレータから見たホストは `10.0.2.2`
+- 文字起こしサーバーとして起動した [minutes](https://github.com/plaodas/minutes)。WSL で動かすとき、エミュレータから見たホストは `10.0.2.2`
 
 ウィジェットとネイティブ録音があるため、Expo Go では動きません。development build を使います。
 
@@ -56,7 +56,7 @@ npx expo run:android
 
 ## 接続
 
-アプリの設定画面に、minutes のベース URL とサービストークンを入れます。認証は `Authorization: Bearer` です。ログイン画面はありません。
+アプリの設定画面に、[minutes](https://github.com/plaodas/minutes) のベース URL とサービストークンを入れます。認証は `Authorization: Bearer` です。ログイン画面はありません。
 
 minutes を WSL で動かし、Android エミュレータからつなぐときは、サーバー URL を `http://10.0.2.2:<minutes の公開ポート>` にします。
 
