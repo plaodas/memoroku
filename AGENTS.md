@@ -40,9 +40,22 @@ Android ウィジェットは [plugins/native/android/widgets/MemoWidget.kt](plu
 
 ## Windows へ移したあとの作業
 
-作業コピーは GitHub から Windows のディスク（`C:\` 配下）へ clone したものです。WSL の `/home/agake/memoroku` と `\\wsl$\` では続けません。`node_modules` は Windows 側で `npm install` します。
+作業コピーは GitHub から Windows のディスクへ clone したものです。WSL の `/home/agake/memoroku` と `\\wsl$\` では続けません。
 
-Android の確認は Windows の Android Studio で行います。`npx expo run:android` で development build を作り、API 31 以降のエミュレータか実機に載せます。ウィジェットとネイティブ録音があるため、Expo Go では動きません。
+`node_modules` は Windows 側で入れます。`react` は `19.2.3` に固定してあり、`@expo/ui` が任意 peer で引く `react-dom@19.3.1` は `react@^19.3.1` を要求します。この衝突があるので `npm install` は使わず、ロックファイルどおりに次で入れます。
+
+```powershell
+npm ci --legacy-peer-deps
+```
+
+Android の確認は Windows の Android Studio で行います。ターミナルから Gradle と SDK が見えるように、ユーザー環境変数を次にします。設定したあとはターミナルを開き直します。
+
+- `JAVA_HOME` は Android Studio 付属の JDK（`C:\Program Files\Android\Android Studio\jbr`）
+- `JAVA_TOOL_OPTIONS` は `--enable-native-access=ALL-UNNAMED`。この JDK 25 では、付けないと prefab が `java.lang.System` の制限で `:expo-modules-core:configureCMakeDebug` に失敗する
+- `ANDROID_HOME` は SDK（`%LOCALAPPDATA%\Android\Sdk`）
+- PATH に `%JAVA_HOME%\bin`、`%ANDROID_HOME%\platform-tools`、`%ANDROID_HOME%\emulator`
+
+`npx expo run:android` で development build を作り、API 31 以降のエミュレータか実機に載せます。ウィジェットとネイティブ録音があるため、Expo Go では動きません。
 
 minutes を WSL で動かすとき、エミュレータから見たホストは `10.0.2.2` です。設定画面のサーバー URL は、そのアドレスと minutes の公開ポートにします。
 

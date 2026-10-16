@@ -26,6 +26,14 @@ const config = {
     usesCleartextTraffic: true,
   },
   plugins: [
+    [
+      'expo-audio',
+      {
+        microphonePermission: 'Memoroku uses the microphone to record voice memos.',
+        enableBackgroundPlayback: false,
+        enableBackgroundRecording: false,
+      },
+    ],
     withOmittedEmptyXcodeValues,
     'expo-sqlite',
     ['expo-secure-store', { faceIDPermission: false }],

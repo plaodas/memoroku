@@ -66,6 +66,11 @@ async function run(memoId: string): Promise<void> {
       transcript,
       title: titleFromSentence(sentence),
     });
+    const saved = await getMemo(memoId);
+    if (!saved) {
+      await publishLatestMemo();
+      return;
+    }
     await publishLatestMemo();
     await notifyMemoReady(memoId, sentence || titleFromSentence(sentence));
   } catch (error) {
