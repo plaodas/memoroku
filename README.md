@@ -59,3 +59,7 @@ npx expo run:android
 アプリの設定画面に、minutes のベース URL とサービストークンを入れます。認証は `Authorization: Bearer` です。ログイン画面はありません。
 
 minutes を WSL で動かし、Android エミュレータからつなぐときは、サーバー URL を `http://10.0.2.2:<minutes の公開ポート>` にします。
+
+## ライセンス
+
+[MIT](LICENSE)
