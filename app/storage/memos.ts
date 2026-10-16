@@ -1,5 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 
+import { deleteAudioFile } from './audioFiles';
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export type MemoStatus = 'recording' | 'uploading' | 'transcribing' | 'ready' | 'failed';
@@ -207,9 +209,28 @@ export async function updateMemo(
   emitMemos();
 }
 
+export async function deleteMemo(id: string): Promise<void> {
+  const memo = await getMemo(id);
+  if (!memo) {
+    return;
+  }
+  const db = await getDatabase();
+  await db.runAsync('DELETE FROM memos WHERE id = ?', id);
+  deleteAudioFile(memo.audioUri);
+  emitMemos();
+}
+
 export async function deleteOldMemos(now = Date.now()): Promise<number> {
   const db = await getDatabase();
-  const result = await db.runAsync('DELETE FROM memos WHERE createdAt < ?', now - DAY_MS);
+  const cutoff = now - DAY_MS;
+  const rows = await db.getAllAsync<{ audioUri: string | null }>(
+    'SELECT audioUri FROM memos WHERE createdAt < ?',
+    cutoff,
+  );
+  const result = await db.runAsync('DELETE FROM memos WHERE createdAt < ?', cutoff);
+  for (const row of rows) {
+    deleteAudioFile(row.audioUri);
+  }
   if (result.changes > 0) {
     emitMemos();
   }
