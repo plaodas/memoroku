@@ -8,9 +8,18 @@ type Props = {
   onClose: () => void;
 };
 
+function maskedToken(value: string): string {
+  if (value.length <= 4) {
+    return '•'.repeat(value.length);
+  }
+  return `••••${value.slice(-4)}`;
+}
+
 export default function Settings({ onClose }: Props) {
   const [baseUrl, setBaseUrl] = useState('');
   const [token, setToken] = useState('');
+  const [revealed, setRevealed] = useState(false);
+  const [preview, setPreview] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -19,11 +28,31 @@ export default function Settings({ onClose }: Props) {
       .then((settings) => {
         setBaseUrl(settings.baseUrl);
         setToken(settings.token);
+        setPreview(settings.token.length > 0);
+        setRevealed(false);
       })
       .catch(() => {
         setError('保存済みの設定を読めませんでした。');
       });
   }, []);
+
+  function onChangeToken(next: string) {
+    setToken(next);
+    if (next.length === 0) {
+      setRevealed(false);
+      setPreview(false);
+    }
+  }
+
+  function onToggleToken() {
+    if (revealed) {
+      setRevealed(false);
+      setPreview(token.length > 0);
+      return;
+    }
+    setRevealed(true);
+    setPreview(false);
+  }
 
   async function onSave() {
     setSaving(true);
@@ -57,16 +86,36 @@ export default function Settings({ onClose }: Props) {
         value={baseUrl}
       />
       <Text style={styles.label}>サービストークン</Text>
-      <TextInput
-        autoCapitalize="none"
-        autoCorrect={false}
-        onChangeText={setToken}
-        placeholder="minutes で発行したトークン"
-        placeholderTextColor={colors.muted}
-        secureTextEntry
-        style={styles.input}
-        value={token}
-      />
+      <View style={styles.tokenField}>
+        {preview && token.length > 0 ? (
+          <Text numberOfLines={1} style={styles.tokenValue}>
+            {maskedToken(token)}
+          </Text>
+        ) : (
+          <TextInput
+            autoCapitalize="none"
+            autoComplete="off"
+            autoCorrect={false}
+            importantForAutofill="no"
+            onChangeText={onChangeToken}
+            placeholder="minutes で発行したトークン"
+            placeholderTextColor={colors.muted}
+            secureTextEntry={!revealed}
+            style={[styles.tokenInput, token.length > 0 ? styles.tokenInputWithAction : null]}
+            textContentType="none"
+            value={token}
+          />
+        )}
+        {token.length > 0 ? (
+          <Pressable
+            accessibilityLabel={revealed ? 'サービストークンを隠す' : 'サービストークンを表示'}
+            accessibilityRole="button"
+            onPress={onToggleToken}
+          >
+            <Text style={styles.reveal}>{revealed ? '隠す' : '表示'}</Text>
+          </Pressable>
+        ) : null}
+      </View>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <Pressable
         accessibilityRole="button"
@@ -120,6 +169,41 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     paddingHorizontal: 14,
     paddingVertical: 12,
+  },
+  tokenField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.line,
+    marginBottom: 20,
+    paddingLeft: 14,
+  },
+  tokenInput: {
+    flex: 1,
+    color: colors.text,
+    fontSize: 16,
+    paddingVertical: 12,
+    paddingRight: 14,
+  },
+  tokenInputWithAction: {
+    paddingRight: 0,
+  },
+  tokenValue: {
+    flex: 1,
+    color: colors.text,
+    fontSize: 16,
+    paddingVertical: 12,
+    paddingRight: 8,
+  },
+  reveal: {
+    color: colors.accent,
+    fontSize: 16,
+    fontWeight: '600',
+    paddingVertical: 12,
+    paddingRight: 14,
+    paddingLeft: 8,
   },
   error: {
     color: colors.danger,

@@ -1,3 +1,5 @@
+import { File, UploadType } from 'expo-file-system';
+
 import { loadMinutesSettings } from '../storage/settings';
 
 // minutes の呼び出しはここだけ。軽量エンドポイントへ切り替えるときはこのファイルを差し替える。
@@ -64,18 +66,39 @@ function failureKind(status: number): MinutesError['kind'] {
 }
 
 export async function upload(fileUri: string): Promise<{ taskId: string }> {
-  const body = new FormData();
-  body.append('file', {
-    uri: fileUri,
-    name: 'memo.m4a',
-    type: 'audio/mp4',
-  } as unknown as Blob);
-  body.append('include_actions', 'false');
-  const response = await request('/api/transcribe-upload-bg', { method: 'POST', body });
-  if (!response.ok) {
-    throw new MinutesError(await readError(response), failureKind(response.status));
+  const { baseUrl, token } = await loadMinutesSettings();
+  if (!baseUrl || !token) {
+    throw new MinutesError('サーバーの URL とトークンを設定してください。', 'config');
   }
-  const payload = (await response.json()) as { task_id?: string };
+  const file = new File(fileUri);
+  let result;
+  try {
+    result = await file.upload(`${baseUrl}/api/transcribe-upload-bg`, {
+      uploadType: UploadType.MULTIPART,
+      fieldName: 'file',
+      mimeType: 'audio/mp4',
+      parameters: { include_actions: 'false' },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json, text/plain',
+      },
+    });
+  } catch (cause) {
+    const message = cause instanceof Error ? cause.message : 'minutes に接続できません。';
+    throw new MinutesError(message, 'network');
+  }
+  if (result.status < 200 || result.status >= 300) {
+    throw new MinutesError(
+      await readError(new Response(result.body, { status: result.status })),
+      failureKind(result.status),
+    );
+  }
+  let payload: { task_id?: string };
+  try {
+    payload = JSON.parse(result.body) as { task_id?: string };
+  } catch {
+    throw new MinutesError('task_id がありません。', 'failed');
+  }
   if (!payload.task_id) {
     throw new MinutesError('task_id がありません。', 'failed');
   }
@@ -95,11 +118,13 @@ export async function waitUntilReady(taskId: string): Promise<void> {
       const response = await request(path);
       if (!response.ok) {
         const kind = failureKind(response.status);
+        const message = await readError(response);
         if (kind === 'network') {
+          console.warn(`[memoroku] status ${taskId} ${kind}: ${message}`);
           await delay(POLL_MS);
           continue;
         }
-        throw new MinutesError(await readError(response), kind);
+        throw new MinutesError(message, kind);
       }
       const payload = (await response.json()) as StatusPayload;
       const stage = payload.stage || payload.status;
@@ -113,6 +138,8 @@ export async function waitUntilReady(taskId: string): Promise<void> {
       if (error instanceof MinutesError && error.kind !== 'network') {
         throw error;
       }
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn(`[memoroku] status ${taskId} network: ${message}`);
     }
     await delay(POLL_MS);
   }
