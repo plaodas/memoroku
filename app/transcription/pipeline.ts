@@ -6,6 +6,15 @@ import { firstSentence } from '../widgets/sentence';
 
 const jobs = new Map<string, Promise<void>>();
 
+function reportError(scope: string, error: unknown): void {
+  if (error instanceof MinutesError) {
+    console.warn(`[memoroku] ${scope} ${error.kind}: ${error.message}`);
+    return;
+  }
+  const message = error instanceof Error ? error.message : String(error);
+  console.warn(`[memoroku] ${scope} ${message}`);
+}
+
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
@@ -25,6 +34,7 @@ async function uploadUntilAccepted(fileUri: string, memoId: string): Promise<str
       if (!(error instanceof MinutesError) || error.kind !== 'network') {
         throw error;
       }
+      reportError(`upload ${memoId}`, error);
       await delay(3000);
     }
   }
@@ -74,6 +84,7 @@ async function run(memoId: string): Promise<void> {
     await publishLatestMemo();
     await notifyMemoReady(memoId, sentence || titleFromSentence(sentence));
   } catch (error) {
+    reportError(`transcription ${memoId}`, error);
     if (error instanceof MinutesError && error.kind === 'failed') {
       const current = await getMemo(memoId);
       if (current) {
