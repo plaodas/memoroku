@@ -1,6 +1,5 @@
 package expo.modules.memorokuwidget
 
-import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -23,15 +22,8 @@ class WidgetBridgeModule : Module() {
   }
 
   private fun refreshWidget(context: Context) {
-    val component = ComponentName(context.packageName, RECEIVER)
-    val manager = AppWidgetManager.getInstance(context)
-    val ids = manager.getAppWidgetIds(component)
-    if (ids.isEmpty()) {
-      return
-    }
-    val intent = Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE).apply {
-      this.component = component
-      putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
+    val intent = Intent(ACTION_REFRESH).apply {
+      component = ComponentName(context.packageName, RECEIVER)
     }
     context.sendBroadcast(intent)
   }
@@ -40,5 +32,6 @@ class WidgetBridgeModule : Module() {
     private const val PREFS = "memoroku_widget"
     private const val KEY_MEMOS = "memos"
     private const val RECEIVER = "com.memoroku.widgets.MemoReceiver"
+    private const val ACTION_REFRESH = "com.memoroku.widgets.action.REFRESH"
   }
 }

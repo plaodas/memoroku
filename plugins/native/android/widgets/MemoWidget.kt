@@ -9,6 +9,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
+import androidx.glance.LocalSize
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.action.actionStartActivity
@@ -23,6 +24,8 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 
+private val horizontalPadding = 12.dp
+
 class MemoWidget : GlanceAppWidget() {
   override suspend fun provideGlance(context: Context, id: GlanceId) {
     val memos = MemoWidgetStore.read(context)
@@ -34,18 +37,19 @@ class MemoWidget : GlanceAppWidget() {
 
 @Composable
 private fun MemoCard(memos: List<WidgetMemo>, packageName: String) {
+  val style = memoTextStyle(longestLine(memos))
   Column(
     modifier = GlanceModifier
       .fillMaxSize()
       .background(ColorProvider(Color(0xFFF6F3EE)))
-      .padding(16.dp),
+      .padding(start = horizontalPadding, top = 12.dp, end = horizontalPadding, bottom = 12.dp),
   ) {
     if (memos.isEmpty()) {
       Text(
         text = "メモはまだありません",
-        maxLines = 1,
+        maxLines = 2,
         modifier = GlanceModifier.fillMaxWidth().clickable(openMemo(packageName, "memoroku://")),
-        style = memoTextStyle(),
+        style = style,
       )
     } else {
       memos.forEach { memo ->
@@ -54,19 +58,29 @@ private fun MemoCard(memos: List<WidgetMemo>, packageName: String) {
           maxLines = 1,
           modifier = GlanceModifier
             .fillMaxWidth()
-            .padding(top = 4.dp, bottom = 4.dp)
+            .padding(top = 2.dp, bottom = 2.dp)
             .clickable(openMemo(packageName, "memoroku://memo/${memo.memoId}")),
-          style = memoTextStyle(),
+          style = style,
         )
       }
     }
   }
 }
 
-private fun memoTextStyle(): TextStyle {
+private fun longestLine(memos: List<WidgetMemo>): Int {
+  if (memos.isEmpty()) {
+    return "メモはまだありません".length
+  }
+  return memos.maxOf { it.text.length }
+}
+
+@Composable
+private fun memoTextStyle(charCount: Int): TextStyle {
+  val inner = (LocalSize.current.width - horizontalPadding * 2).value.coerceAtLeast(48f)
+  val size = (inner / charCount.coerceAtLeast(1) * 0.92f).coerceIn(11f, 16f)
   return TextStyle(
     color = ColorProvider(Color(0xFF1A1A1A)),
-    fontSize = 16.sp,
+    fontSize = size.sp,
     fontWeight = FontWeight.Medium,
   )
 }
