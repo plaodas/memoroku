@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, FlatList, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
-import { Card } from '../components/Card';
+import { Card, closeSwipedCards } from '../components/Card';
 import { FadeIn } from '../components/FadeIn';
 import { RecordButton } from '../components/RecordButton';
 import { usePlayback } from '../hooks/usePlayback';
-import { useRecorder } from '../hooks/useRecorder';
+import { microphoneGranted, useRecorder } from '../hooks/useRecorder';
 import { keepRecording } from '../storage/audioFiles';
-import { loadMinutesSettings } from '../storage/settings';
+import { loadHoldToRecord, loadMinutesSettings, saveHoldToRecord } from '../storage/settings';
 import {
   addMemo,
   deleteMemo,
@@ -17,6 +17,7 @@ import {
   type Memo,
 } from '../storage/memos';
 import { transcribeMemo } from '../transcription/pipeline';
+import { colors } from '../theme';
 import { publishLatestMemo } from '../widgets/publish';
 
 type Props = {
@@ -31,6 +32,9 @@ export default function Home({ focusedMemoId, onOpenSettings }: Props) {
   const [memos, setMemos] = useState<Memo[]>([]);
   const [loading, setLoading] = useState(true);
   const [configured, setConfigured] = useState(true);
+  const [holdMode, setHoldMode] = useState(false);
+  const [micAllowed, setMicAllowed] = useState(false);
+  const savedHold = useRef<boolean | null>(null);
 
   useEffect(() => {
     if (!focusedMemoId) {
@@ -54,6 +58,37 @@ export default function Home({ focusedMemoId, onOpenSettings }: Props) {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    Promise.all([loadHoldToRecord(), microphoneGranted()])
+      .then(([saved, granted]) => {
+        if (cancelled) {
+          return;
+        }
+        savedHold.current = saved;
+        setMicAllowed(granted);
+        setHoldMode(saved ?? granted);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (recorder.recording) {
+      return;
+    }
+    microphoneGranted()
+      .then((granted) => {
+        setMicAllowed(granted);
+        if (savedHold.current === null) {
+          setHoldMode(granted);
+        }
+      })
+      .catch(() => undefined);
+  }, [recorder.recording]);
+
+  useEffect(() => {
     const unsubscribe = subscribeMemos(() => {
       refresh().catch(() => undefined);
     });
@@ -63,28 +98,52 @@ export default function Home({ focusedMemoId, onOpenSettings }: Props) {
     return unsubscribe;
   }, [refresh]);
 
+  async function saveRecording() {
+    const { uri, durationMs } = await recorder.stop();
+    const audioUri = uri ? await keepRecording(uri) : null;
+    if (!audioUri) {
+      return;
+    }
+    const memo = await addMemo({
+      title: '音声メモ',
+      audioUri,
+      durationMs,
+      status: 'uploading',
+    });
+    void transcribeMemo(memo.id);
+  }
+
   async function onPressRecord() {
     if (recorder.recording) {
-      const { uri, durationMs } = await recorder.stop();
-      const audioUri = uri ? await keepRecording(uri) : null;
-      const memo = await addMemo({
-        title: '音声メモ',
-        audioUri,
-        durationMs,
-        status: audioUri ? 'uploading' : 'failed',
-      });
-      if (audioUri) {
-        void transcribeMemo(memo.id);
-      }
+      await saveRecording();
       return;
     }
     playback.stop();
     await recorder.start();
   }
 
+  function onHoldStart() {
+    playback.stop();
+    recorder.start().catch(() => undefined);
+  }
+
+  function onHoldEnd() {
+    recorder.noteReleased();
+    if (!recorder.isActive()) {
+      return;
+    }
+    saveRecording().catch(() => undefined);
+  }
+
+  function onToggleHold(next: boolean) {
+    savedHold.current = next;
+    setHoldMode(next);
+    saveHoldToRecord(next).catch(() => undefined);
+  }
+
   function confirmDelete(memo: Memo) {
     Alert.alert('このメモを削除しますか？', undefined, [
-      { text: 'キャンセル', style: 'cancel' },
+      { text: 'キャンセル', style: 'cancel', onPress: closeSwipedCards },
       {
         text: '削除',
         style: 'destructive',
@@ -126,6 +185,9 @@ export default function Home({ focusedMemoId, onOpenSettings }: Props) {
           });
         }}
         keyExtractor={(memo) => memo.id}
+        directionalLockEnabled
+        onScrollBeginDrag={closeSwipedCards}
+        style={styles.listView}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <Text style={styles.empty}>{loading ? '読み込み中…' : 'メモはまだありません'}</Text>
@@ -154,12 +216,29 @@ export default function Home({ focusedMemoId, onOpenSettings }: Props) {
       />
       {recorder.error ? <Text style={styles.error}>{recorder.error}</Text> : null}
       {playback.error ? <Text style={styles.error}>{playback.error}</Text> : null}
+      {micAllowed ? (
+        <View style={styles.mode}>
+          <Text style={styles.modeLabel}>押しながら録音</Text>
+          <Switch
+            accessibilityLabel="押しながら録音"
+            disabled={recorder.recording}
+            onValueChange={onToggleHold}
+            thumbColor={colors.surface}
+            trackColor={{ false: colors.line, true: colors.accent }}
+            value={holdMode}
+          />
+        </View>
+      ) : null}
       <RecordButton
         recording={recorder.recording}
         elapsedMs={recorder.elapsedMs}
+        levels={recorder.levels}
+        holdMode={holdMode}
         onPress={() => {
           onPressRecord().catch(() => undefined);
         }}
+        onHoldStart={onHoldStart}
+        onHoldEnd={onHoldEnd}
       />
     </View>
   );
@@ -168,7 +247,7 @@ export default function Home({ focusedMemoId, onOpenSettings }: Props) {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#F6F3EE',
+    backgroundColor: colors.background,
     paddingTop: 64,
     paddingHorizontal: 20,
     paddingBottom: 28,
@@ -183,23 +262,26 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   title: {
-    color: '#1A1A1A',
+    color: colors.text,
     fontSize: 32,
     fontWeight: '700',
   },
   settings: {
-    color: '#1A1A1A',
+    color: colors.accent,
     fontSize: 16,
     fontWeight: '600',
   },
   subtitle: {
-    color: '#6B6560',
+    color: colors.muted,
     fontSize: 14,
   },
   warning: {
-    color: '#9B2C2C',
+    color: colors.danger,
     fontSize: 14,
     marginTop: 8,
+  },
+  listView: {
+    flex: 1,
   },
   list: {
     gap: 12,
@@ -207,13 +289,25 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   empty: {
-    color: '#6B6560',
+    color: colors.muted,
     fontSize: 15,
     marginTop: 12,
   },
   error: {
-    color: '#9B2C2C',
+    color: colors.danger,
     textAlign: 'center',
     marginBottom: 12,
+  },
+  mode: {
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
+  modeLabel: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

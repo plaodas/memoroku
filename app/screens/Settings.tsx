@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { loadMinutesSettings, saveMinutesSettings } from '../storage/settings';
+import { colors } from '../theme';
 
 type Props = {
   onClose: () => void;
@@ -51,7 +52,7 @@ export default function Settings({ onClose }: Props) {
         keyboardType="url"
         onChangeText={setBaseUrl}
         placeholder="http://192.168.0.1:8080"
-        placeholderTextColor="#A39E98"
+        placeholderTextColor={colors.muted}
         style={styles.input}
         value={baseUrl}
       />
@@ -61,7 +62,7 @@ export default function Settings({ onClose }: Props) {
         autoCorrect={false}
         onChangeText={setToken}
         placeholder="minutes で発行したトークン"
-        placeholderTextColor="#A39E98"
+        placeholderTextColor={colors.muted}
         secureTextEntry
         style={styles.input}
         value={token}
@@ -84,7 +85,7 @@ export default function Settings({ onClose }: Props) {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#F6F3EE',
+    backgroundColor: colors.background,
     paddingTop: 64,
     paddingHorizontal: 20,
   },
@@ -95,36 +96,38 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   title: {
-    color: '#1A1A1A',
+    color: colors.text,
     fontSize: 32,
     fontWeight: '700',
   },
   close: {
-    color: '#1A1A1A',
+    color: colors.accent,
     fontSize: 16,
     fontWeight: '600',
   },
   label: {
-    color: '#6B6560',
+    color: colors.muted,
     fontSize: 13,
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: 12,
-    color: '#1A1A1A',
+    borderWidth: 1,
+    borderColor: colors.line,
+    color: colors.text,
     fontSize: 16,
     marginBottom: 20,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
   error: {
-    color: '#9B2C2C',
+    color: colors.danger,
     marginBottom: 12,
   },
   save: {
     alignItems: 'center',
-    backgroundColor: '#1A1A1A',
+    backgroundColor: colors.accent,
     borderRadius: 14,
     paddingVertical: 14,
   },

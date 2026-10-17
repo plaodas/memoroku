@@ -24,6 +24,7 @@ public final class NativeRecorderModule: Module {
         AVNumberOfChannelsKey: 1,
       ]
       let recorder = try AVAudioRecorder(url: url, settings: settings)
+      recorder.isMeteringEnabled = true
       recorder.prepareToRecord()
       guard recorder.record() else {
         throw RecorderError.failedToStart
@@ -37,6 +38,20 @@ public final class NativeRecorderModule: Module {
       let uri = self.recorder?.url.absoluteString
       self.recorder = nil
       return uri
+    }.runOnQueue(.main)
+
+    AsyncFunction("microphoneGranted") { () -> Bool in
+      AVAudioSession.sharedInstance().recordPermission == .granted
+    }
+
+    AsyncFunction("readLevel") { () -> Double in
+      guard let recorder = self.recorder, recorder.isRecording else {
+        return 0
+      }
+      recorder.updateMeters()
+      let decibels = recorder.averagePower(forChannel: 0)
+      let clamped = min(0, max(-50, decibels))
+      return Double((clamped + 50) / 50)
     }.runOnQueue(.main)
   }
 }
