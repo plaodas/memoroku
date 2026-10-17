@@ -16,8 +16,10 @@ type WidgetBridgeModule = {
   setMemos(memosJson: string): void;
 };
 
+const WIDGET_MEMO_LIMIT = 8;
+
 export async function publishLatestMemo(): Promise<void> {
-  const ready = await getRecentReadyMemos(3);
+  const ready = await getRecentReadyMemos(WIDGET_MEMO_LIMIT);
   const memos = ready.flatMap((memo) => {
     const text = memo.transcript ? widgetLine(memo.transcript) : '';
     return text ? [{ text, memoId: memo.id }] : [];

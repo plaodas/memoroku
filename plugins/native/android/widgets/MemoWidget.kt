@@ -12,6 +12,7 @@ import androidx.glance.GlanceModifier
 import androidx.glance.LocalSize
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
@@ -25,8 +26,10 @@ import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 
 private val horizontalPadding = 12.dp
+private val verticalPadding = 12.dp
 
 class MemoWidget : GlanceAppWidget() {
+  override val sizeMode: SizeMode = SizeMode.Exact
   override suspend fun provideGlance(context: Context, id: GlanceId) {
     val memos = MemoWidgetStore.read(context)
     provideContent {
@@ -37,14 +40,16 @@ class MemoWidget : GlanceAppWidget() {
 
 @Composable
 private fun MemoCard(memos: List<WidgetMemo>, packageName: String) {
-  val style = memoTextStyle(longestLine(memos))
+  val fontSp = memoFontSize(longestLine(memos))
+  val style = memoTextStyle(fontSp)
+  val visible = memos.take(rowsThatFit(fontSp))
   Column(
     modifier = GlanceModifier
       .fillMaxSize()
       .background(ColorProvider(Color(0xFFF6F3EE)))
-      .padding(start = horizontalPadding, top = 12.dp, end = horizontalPadding, bottom = 12.dp),
+      .padding(start = horizontalPadding, top = verticalPadding, end = horizontalPadding, bottom = verticalPadding),
   ) {
-    if (memos.isEmpty()) {
+    if (visible.isEmpty()) {
       Text(
         text = "メモはまだありません",
         maxLines = 2,
@@ -52,7 +57,7 @@ private fun MemoCard(memos: List<WidgetMemo>, packageName: String) {
         style = style,
       )
     } else {
-      memos.forEach { memo ->
+      visible.forEach { memo ->
         Text(
           text = memo.text,
           maxLines = 1,
@@ -75,12 +80,23 @@ private fun longestLine(memos: List<WidgetMemo>): Int {
 }
 
 @Composable
-private fun memoTextStyle(charCount: Int): TextStyle {
+private fun rowsThatFit(fontSp: Float): Int {
+  val height = LocalSize.current.height.value
+  val row = fontSp * 1.55f + 4f
+  val available = (height - verticalPadding.value * 2).coerceAtLeast(row)
+  return (available / row).toInt().coerceAtLeast(1)
+}
+
+@Composable
+private fun memoFontSize(charCount: Int): Float {
   val inner = (LocalSize.current.width - horizontalPadding * 2).value.coerceAtLeast(48f)
-  val size = (inner / charCount.coerceAtLeast(1) * 0.92f).coerceIn(11f, 16f)
+  return (inner / charCount.coerceAtLeast(1) * 0.92f).coerceIn(11f, 16f)
+}
+
+private fun memoTextStyle(fontSp: Float): TextStyle {
   return TextStyle(
     color = ColorProvider(Color(0xFF1A1A1A)),
-    fontSize = size.sp,
+    fontSize = fontSp.sp,
     fontWeight = FontWeight.Medium,
   )
 }
