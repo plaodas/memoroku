@@ -16,6 +16,7 @@ import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.layout.Column
 import androidx.glance.layout.fillMaxSize
+import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.padding
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
@@ -24,38 +25,55 @@ import androidx.glance.unit.ColorProvider
 
 class MemoWidget : GlanceAppWidget() {
   override suspend fun provideGlance(context: Context, id: GlanceId) {
-    val (text, memoId) = MemoWidgetStore.read(context)
+    val memos = MemoWidgetStore.read(context)
     provideContent {
-      MemoCard(text = text, memoId = memoId, packageName = context.packageName)
+      MemoCard(memos = memos, packageName = context.packageName)
     }
   }
 }
 
 @Composable
-private fun MemoCard(text: String, memoId: String, packageName: String) {
-  val display = if (text.isBlank()) "メモはまだありません" else text
-  val destination = if (memoId.isBlank()) "memoroku://" else "memoroku://memo/$memoId"
-  val open = actionStartActivity(
-    Intent(Intent.ACTION_VIEW, Uri.parse(destination)).apply {
-      setPackage(packageName)
-      flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-    },
-  )
+private fun MemoCard(memos: List<WidgetMemo>, packageName: String) {
   Column(
     modifier = GlanceModifier
       .fillMaxSize()
       .background(ColorProvider(Color(0xFFF6F3EE)))
-      .padding(16.dp)
-      .clickable(open),
+      .padding(16.dp),
   ) {
-    Text(
-      text = display,
-      maxLines = 6,
-      style = TextStyle(
-        color = ColorProvider(Color(0xFF1A1A1A)),
-        fontSize = 16.sp,
-        fontWeight = FontWeight.Medium,
-      ),
-    )
+    if (memos.isEmpty()) {
+      Text(
+        text = "メモはまだありません",
+        maxLines = 1,
+        modifier = GlanceModifier.fillMaxWidth().clickable(openMemo(packageName, "memoroku://")),
+        style = memoTextStyle(),
+      )
+    } else {
+      memos.forEach { memo ->
+        Text(
+          text = memo.text,
+          maxLines = 1,
+          modifier = GlanceModifier
+            .fillMaxWidth()
+            .padding(top = 4.dp, bottom = 4.dp)
+            .clickable(openMemo(packageName, "memoroku://memo/${memo.memoId}")),
+          style = memoTextStyle(),
+        )
+      }
+    }
   }
 }
+
+private fun memoTextStyle(): TextStyle {
+  return TextStyle(
+    color = ColorProvider(Color(0xFF1A1A1A)),
+    fontSize = 16.sp,
+    fontWeight = FontWeight.Medium,
+  )
+}
+
+private fun openMemo(packageName: String, destination: String) = actionStartActivity(
+  Intent(Intent.ACTION_VIEW, Uri.parse(destination)).apply {
+    setPackage(packageName)
+    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+  },
+)

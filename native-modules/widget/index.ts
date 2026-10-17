@@ -1,7 +1,7 @@
 import { requireNativeModule } from 'expo';
 
 type WidgetBridgeModule = {
-  setLatestMemo(text: string, memoId: string): void;
+  setMemos(memosJson: string): void;
 };
 
 export const WidgetBridge = requireNativeModule<WidgetBridgeModule>('WidgetBridge');
