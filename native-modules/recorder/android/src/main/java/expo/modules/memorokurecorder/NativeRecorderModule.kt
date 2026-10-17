@@ -20,24 +20,62 @@ class NativeRecorderModule : Module() {
       val context = appContext.reactContext ?: error("React context is unavailable")
       val file = File(context.cacheDir, "memo-${System.currentTimeMillis()}.m4a")
       val next = createRecorder(context)
-      next.setAudioSource(MediaRecorder.AudioSource.MIC)
-      next.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
-      next.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
-      next.setOutputFile(file.absolutePath)
-      next.prepare()
-      next.start()
+      try {
+        next.setAudioSource(MediaRecorder.AudioSource.MIC)
+        next.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+        next.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+        next.setOutputFile(file.absolutePath)
+        next.prepare()
+        next.start()
+      } catch (error: Exception) {
+        next.release()
+        file.delete()
+        throw error
+      }
       recorder = next
       outputPath = file.absolutePath
       true
     }
 
     AsyncFunction("stopRecording") {
-      recorder?.run {
-        stop()
-        release()
+      val current = recorder
+      val path = outputPath
+      if (current == null) {
+        return@AsyncFunction null
       }
-      recorder = null
-      outputPath
+      var captured = false
+      try {
+        current.stop()
+        captured = true
+      } catch (_: RuntimeException) {
+        // stop() throws when the recorder never received audio, which happens
+        // if the finger lifts immediately or the activity is in a bubble.
+      } finally {
+        try {
+          current.release()
+        } catch (_: RuntimeException) {
+        }
+        if (recorder === current) {
+          recorder = null
+          outputPath = null
+        }
+      }
+      if (!captured) {
+        if (path != null) {
+          File(path).delete()
+        }
+        return@AsyncFunction null
+      }
+      path
+    }
+
+    AsyncFunction("readLevel") {
+      val current = recorder ?: return@AsyncFunction 0.0
+      try {
+        current.maxAmplitude / 32767.0
+      } catch (_: RuntimeException) {
+        0.0
+      }
     }
   }
 
