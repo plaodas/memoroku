@@ -34,7 +34,12 @@ export default function Home({ focusedMemoId, onOpenSettings }: Props) {
   const [configured, setConfigured] = useState(true);
   const [holdMode, setHoldMode] = useState(false);
   const [micAllowed, setMicAllowed] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(focusedMemoId);
   const savedHold = useRef<boolean | null>(null);
+
+  useEffect(() => {
+    setSelectedId(focusedMemoId);
+  }, [focusedMemoId]);
 
   useEffect(() => {
     if (!focusedMemoId) {
@@ -177,7 +182,7 @@ export default function Home({ focusedMemoId, onOpenSettings }: Props) {
       <FlatList
         ref={listRef}
         data={memos}
-        extraData={focusedMemoId}
+        extraData={selectedId}
         onScrollToIndexFailed={(info) => {
           listRef.current?.scrollToOffset({
             offset: info.averageItemLength * info.index,
@@ -203,13 +208,18 @@ export default function Home({ focusedMemoId, onOpenSettings }: Props) {
               audioUri={item.audioUri}
               playing={playback.isPlaying(item.id)}
               onTogglePlay={() => {
+                setSelectedId(item.id);
                 if (!item.audioUri || recorder.recording) {
                   return;
                 }
                 playback.toggle(item.id, item.audioUri).catch(() => undefined);
               }}
-              onDelete={() => confirmDelete(item)}
-              focused={item.id === focusedMemoId}
+              onDelete={() => {
+                setSelectedId(item.id);
+                confirmDelete(item);
+              }}
+              onSelect={() => setSelectedId(item.id)}
+              focused={item.id === selectedId}
             />
           </FadeIn>
         )}
