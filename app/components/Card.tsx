@@ -1,4 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import CircleStop from 'lucide-react-native/icons/circle-stop';
+import Play from 'lucide-react-native/icons/play';
+import Trash2 from 'lucide-react-native/icons/trash';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Animated,
   PanResponder,
@@ -23,6 +26,7 @@ type Props = {
   playing: boolean;
   onTogglePlay: () => void;
   onDelete: () => void;
+  onSelect: () => void;
   focused?: boolean;
 };
 
@@ -34,6 +38,14 @@ const STATUS_LABEL: Record<Exclude<MemoStatus, 'ready'>, string> = {
   transcribing: '文字起こし中',
   failed: '文字起こしに失敗しました',
 };
+
+function compactLine(value: string): string {
+  return value.replace(/\s+/g, ' ').trim().replace(/[。！？.!?…]+$/u, '');
+}
+
+function sameLine(left: string, right: string): boolean {
+  return compactLine(left) === compactLine(right);
+}
 
 const closers = new Set<() => void>();
 
@@ -69,9 +81,12 @@ export function Card({
   playing,
   onTogglePlay,
   onDelete,
+  onSelect,
   focused,
 }: Props) {
-  const body = status === 'ready' ? transcript : STATUS_LABEL[status];
+  const heading = status === 'transcribing' ? STATUS_LABEL.transcribing : title;
+  const detail = status === 'ready' ? transcript : STATUS_LABEL[status];
+  const showDetail = Boolean(detail && !sameLine(heading, detail));
   const translateX = useRef(new Animated.Value(0)).current;
   const offset = useRef(0);
   const width = useRef(0);
@@ -203,30 +218,63 @@ export function Card({
             onPress={onDelete}
             style={styles.deleteHit}
           >
+            <Trash2 color="#ffffff" size={16} strokeWidth={2.25} />
             <Text style={styles.deleteText}>削除</Text>
           </Pressable>
         </View>
         <Animated.View style={{ transform: [{ translateX }] }} {...pan.panHandlers}>
-          <View style={styles.card}>
-            <Text style={styles.title}>{title}</Text>
-            {body ? <Text style={styles.body}>{body}</Text> : null}
+          <Pressable onPress={onSelect} style={styles.card}>
+            <Text style={styles.title}>{heading}</Text>
+            {showDetail ? <Text style={styles.body}>{detail}</Text> : null}
             <View style={styles.actions}>
               {audioUri ? (
-                <Pressable accessibilityRole="button" onPress={onTogglePlay}>
-                  <Text style={styles.action}>{playing ? '停止' : '再生'}</Text>
-                </Pressable>
+                <ActionButton
+                  label={playing ? '停止' : '再生'}
+                  icon={
+                    playing ? (
+                      <CircleStop color={colors.accent} size={16} strokeWidth={2.25} />
+                    ) : (
+                      <Play color={colors.accent} size={16} strokeWidth={2.25} />
+                    )
+                  }
+                  onPress={onTogglePlay}
+                />
               ) : null}
-              <Pressable accessibilityRole="button" onPress={onDelete}>
-                <Text style={styles.action}>削除</Text>
-              </Pressable>
+              <ActionButton
+                label="削除"
+                icon={<Trash2 color={colors.accent} size={16} strokeWidth={2.25} />}
+                onPress={onDelete}
+              />
             </View>
             <Text style={styles.meta}>
               {formatTime(createdAt)} · {formatDuration(durationMs)}
             </Text>
-          </View>
+          </Pressable>
         </Animated.View>
       </View>
     </View>
+  );
+}
+
+function ActionButton({
+  icon,
+  label,
+  onPress,
+}: {
+  icon: ReactNode;
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      style={styles.action}
+    >
+      {icon}
+      <Text style={styles.actionText}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -257,8 +305,10 @@ const styles = StyleSheet.create({
   deleteHit: {
     width: REVEAL,
     height: '100%',
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 4,
   },
   deleteText: {
     color: '#ffffff',
@@ -286,6 +336,11 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   action: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  actionText: {
     color: colors.accent,
     fontSize: 15,
     fontWeight: '600',
