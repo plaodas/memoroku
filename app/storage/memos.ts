@@ -168,6 +168,18 @@ export async function getPendingMemos(): Promise<Memo[]> {
   return rows.map(toMemo);
 }
 
+export async function getRecentReadyMemos(limit = 3): Promise<Memo[]> {
+  const db = await getDatabase();
+  const rows = await db.getAllAsync<MemoRow>(
+    `SELECT ${MEMO_COLUMNS} FROM memos
+     WHERE status = 'ready' AND transcript IS NOT NULL AND length(trim(transcript)) > 0
+     ORDER BY createdAt DESC
+     LIMIT ?`,
+    limit,
+  );
+  return rows.map(toMemo);
+}
+
 export async function getLatestReadyMemo(): Promise<Memo | null> {
   const db = await getDatabase();
   const row = await db.getFirstAsync<MemoRow>(

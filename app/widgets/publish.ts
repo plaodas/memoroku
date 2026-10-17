@@ -1,25 +1,32 @@
 import { Platform } from 'react-native';
 
-import { getLatestReadyMemo } from '../storage/memos';
-import { firstSentence } from './sentence';
+import { getRecentReadyMemos } from '../storage/memos';
+import { widgetLine } from './sentence';
+
+export type WidgetMemo = {
+  text: string;
+  memoId: string;
+};
 
 type MemoWidgetInstance = {
-  updateSnapshot(props: { text: string; memoId: string }): void;
+  updateSnapshot(props: { memos: WidgetMemo[] }): void;
 };
 
 type WidgetBridgeModule = {
-  setLatestMemo(text: string, memoId: string): void;
+  setMemos(memosJson: string): void;
 };
 
 export async function publishLatestMemo(): Promise<void> {
-  const latest = await getLatestReadyMemo();
-  const text = latest?.transcript ? firstSentence(latest.transcript) : '';
-  const memoId = latest?.id ?? '';
+  const ready = await getRecentReadyMemos(3);
+  const memos = ready.flatMap((memo) => {
+    const text = memo.transcript ? widgetLine(memo.transcript) : '';
+    return text ? [{ text, memoId: memo.id }] : [];
+  });
   if (Platform.OS === 'ios') {
     const widget = require('./MemoWidget').default as MemoWidgetInstance;
-    widget.updateSnapshot({ text, memoId });
+    widget.updateSnapshot({ memos });
     return;
   }
   const bridge = require('../../native-modules/widget').WidgetBridge as WidgetBridgeModule;
-  bridge.setLatestMemo(text, memoId);
+  bridge.setMemos(JSON.stringify(memos));
 }

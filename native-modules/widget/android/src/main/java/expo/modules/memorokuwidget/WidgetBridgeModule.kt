@@ -11,13 +11,12 @@ class WidgetBridgeModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("WidgetBridge")
 
-    Function("setLatestMemo") { text: String, memoId: String ->
+    Function("setMemos") { memosJson: String ->
       val context = appContext.reactContext?.applicationContext ?: return@Function
       context
         .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         .edit()
-        .putString(KEY_TEXT, text)
-        .putString(KEY_ID, memoId)
+        .putString(KEY_MEMOS, memosJson)
         .commit()
       refreshWidget(context)
     }
@@ -39,8 +38,7 @@ class WidgetBridgeModule : Module() {
 
   companion object {
     private const val PREFS = "memoroku_widget"
-    private const val KEY_TEXT = "text"
-    private const val KEY_ID = "memoId"
+    private const val KEY_MEMOS = "memos"
     private const val RECEIVER = "com.memoroku.widgets.MemoReceiver"
   }
 }

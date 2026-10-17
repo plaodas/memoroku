@@ -26,17 +26,17 @@ minutes への呼び出しは [app/api/minutes.ts](app/api/minutes.ts) に閉じ
 
 編集する場所は [plugins/native](plugins/native) と [plugins/withMemorokuNative.js](plugins/withMemorokuNative.js) です。`ios/` と `android/` は `npx expo prebuild` が作り直します。
 
-iOS ウィジェットは [app/widgets/MemoWidget.tsx](app/widgets/MemoWidget.tsx) です。`'widget'` 指定子と `@expo/ui/swift-ui` だけで書き、`updateSnapshot` に文と memo id を渡します。App Group は `expo-widgets` が持ちます。Swift のウィジェットはアプリターゲットに入れません。
+iOS ウィジェットは [app/widgets/MemoWidget.tsx](app/widgets/MemoWidget.tsx) です。`'widget'` 指定子と `@expo/ui/swift-ui` だけで書き、`updateSnapshot` に最大3件の文と memo id を渡します。App Group は `expo-widgets` が持ちます。Swift のウィジェットはアプリターゲットに入れません。
 
 Android ウィジェットは [plugins/native/android/widgets/MemoWidget.kt](plugins/native/android/widgets/MemoWidget.kt) です。表示文は SharedPreferences の `memoroku_widget` に書き、Glance が読みます。書き込みと更新は [native-modules/widget](native-modules/widget) の `WidgetBridge` です。
 
 ## ウィジェットと通知
 
-ウィジェットは、文字起こしが終わった短い文を表示します。録音ボタンは置きません。ウィジェットから minutes を呼びません。
+ウィジェットは、文字起こしが終わった新しい録音を最大3件、各先頭15文字で表示します。録音ボタンは置きません。ウィジェットから minutes を呼びません。
 
-タップと完了通知は `memoroku://memo/{id}` でそのメモを開きます。通知は `expo-notifications` のローカル通知です。
+ウィジェットの行と完了通知は `memoroku://memo/{id}` でそのメモを開きます。通知は `expo-notifications` のローカル通知です。
 
-24時間を過ぎたメモを消したとき、表示中のメモが無ければウィジェットの文も空にします。
+24時間を過ぎたメモを消したとき、表示するメモが無ければウィジェットも空にします。
 
 ## Windows へ移したあとの作業
 
