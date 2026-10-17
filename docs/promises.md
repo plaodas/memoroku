@@ -14,7 +14,7 @@ memoroku は、短い録音メモのスマホアプリです。
 
 memoroku はこのスマホアプリだけを置くリポジトリです。
 
-文字起こしは `../minutes` のアップロードと文字起こしを API として使います。話者分け、要約、Word 出力は呼びません。二つのリポジトリは統合しません。
+文字起こしは `../minutes` の `POST /api/transcribe-upload-bg` に `transcript_only=1` を付けて使い、整形せず本文だけを受け取ります。話者分け、要約、Word 出力は呼びません。二つのリポジトリは統合しません。
 
 API の形の正本は、minutes の `docs/openapi.json` のうち memoroku が使う経路だけです。
 

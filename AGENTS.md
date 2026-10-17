@@ -6,7 +6,7 @@
 
 このリポジトリはスマホアプリだけです。文字起こしは `../minutes` の API を使います。minutes のコードは変更しません。二つのリポジトリは統合しません。
 
-話者分け、要約、Word 出力は呼びません。まだ無い軽量エンドポイントへの実装はしません。
+話者分け、要約、Word 出力は呼びません。アップロードには `transcript_only=1` を付け、整形を待ちません。
 
 ## API
 
@@ -14,7 +14,7 @@ minutes への呼び出しは [app/api/minutes.ts](app/api/minutes.ts) に閉じ
 
 使う経路は次の三つです。
 
-- `POST /api/transcribe-upload-bg`
+- `POST /api/transcribe-upload-bg`。multipart に `transcript_only=1` を付ける
 - `GET /api/bg/status/{task_id}`。`stage` が `success` になるまで、アプリのプロセスが生きている間だけ繰り返す
 - `GET /api/bg/transcript/{task_id}?format=txt` の本文だけを保存する
 

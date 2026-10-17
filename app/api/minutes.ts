@@ -77,7 +77,7 @@ export async function upload(fileUri: string): Promise<{ taskId: string }> {
       uploadType: UploadType.MULTIPART,
       fieldName: 'file',
       mimeType: 'audio/mp4',
-      parameters: { include_actions: 'false' },
+      parameters: { include_actions: 'false', transcript_only: '1' },
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: 'application/json, text/plain',
