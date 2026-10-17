@@ -1,65 +1,72 @@
 # memoroku
 
-短い録音メモのスマホアプリです。録音を端末に残し、minutes に送って文字起こしし、できた短い文をホーム画面のウィジェットに出します。
+[日本語](README.ja.md)
 
-文字起こしのバックエンドは [minutes](https://github.com/plaodas/minutes) です。このリポジトリにはスマホアプリだけを置きます。話者分け、要約、Word 出力は呼びません。
+A phone app for short voice memos. It keeps each recording on the device, sends it to minutes for transcription, and shows the short result on a home-screen widget.
 
-プロダクトの約束は [docs/promises.md](docs/promises.md) です。
+The transcription backend is [minutes](https://github.com/plaodas/minutes). This repository holds only the phone app. It does not call speaker diarization, summaries, or Word export.
 
-## できること
+The product promises are in [docs/promises.md](docs/promises.md).
 
-- 録音する。音声は端末の保存領域に残り、一覧から再生できる。マイクの許可が済んでいるときは、最初から押しながら録音になる
-- minutes へアップロードし、文字起こしが終わるまで待つ
-- 完了したら通知し、短い文をウィジェットに出す。タップするとそのメモを開く
-- メモは 24 時間で消える。一覧から削除することもできる。消すとき録音ファイルも消す
+## Related repositories
 
-ウィジェットに録音ボタンはありません。ウィジェットから minutes は呼びません。
+- [minutes](https://github.com/plaodas/minutes): the backend that transcribes audio. memoroku uploads recordings here.
+- [minutes-ext-access](https://github.com/plaodas/minutes-ext-access): a sample React / Laravel app that calls minutes. The browser never holds a minutes token.
 
-サーバーの URL とトークンが空でも録音と再生はできます。アップロードは設定を保存したあとに再開します。
+## What it does
 
-## 必要なもの
+- Records audio. The file stays in the device's storage and can be played from the list. After the microphone permission is granted, hold-to-record is the default
+- Uploads to minutes and waits until transcription finishes
+- Notifies when a memo is ready and shows a short line on the widget. A tap opens that memo
+- Deletes memos after 24 hours. They can also be deleted from the list, which removes the recording file
 
-- Node.js 20.19 以降、22.13 以降、24.3 以降、または 25 以降
-- Android Studio。SDK は API 31 以降。確認は API 31 以降のエミュレータか実機
-- 文字起こしサーバーとして起動した [minutes](https://github.com/plaodas/minutes)。WSL で動かすとき、エミュレータから見たホストは `10.0.2.2`
+The widget has no record button. The widget does not call minutes.
 
-ウィジェットとネイティブ録音があるため、Expo Go では動きません。development build を使います。
+Recording and playback work before the server URL and token are saved. Uploads resume after those settings are saved.
 
-iOS の実機確認は Mac と iPhone が揃ってから行います。Windows では `expo run:ios` と `pod install` は実行しません。
+## Requirements
 
-## Windows での準備
+- Node.js 20.19 or later, 22.13 or later, 24.3 or later, or 25 or later
+- Android Studio, with an SDK of API 31 or later. Check on an emulator or device at API 31 or later
+- [minutes](https://github.com/plaodas/minutes) running as the transcription server. From the Android emulator, the host is `10.0.2.2` when minutes runs in WSL
 
-作業コピーは Windows のディスクに置きます。WSL のパスや `\\wsl$\` では続けません。
+Expo Go does not run this app, because it uses a widget and native recording. Use a development build.
+
+Check iOS on a device after a Mac and an iPhone are available. On Windows, do not run `expo run:ios` or `pod install`.
+
+## Setup on Windows
+
+Keep the working copy on a Windows disk. Do not continue from a WSL path or `\\wsl$\`.
 
 ```powershell
 npm ci --legacy-peer-deps
 ```
 
-`react` は `19.2.3` に固定してあり、`@expo/ui` が任意で引く `react-dom@19.3.1` と peer が衝突します。`npm install` は使わず、上のコマンドでロックファイルどおりに入れます。
+`react` is pinned to `19.2.3`. `@expo/ui` optionally pulls `react-dom@19.3.1`, and that peer dependency conflicts. Do not use `npm install`. Install from the lockfile with the command above.
 
-ターミナルから Gradle と SDK が見えるように、ユーザー環境変数を次にします。設定したあとはターミナルを開き直します。
+Set these user environment variables so the terminal can see Gradle and the SDK. Open a new terminal after changing them.
 
-- `JAVA_HOME` は Android Studio 付属の JDK（`C:\Program Files\Android\Android Studio\jbr`）
-- `JAVA_TOOL_OPTIONS` は `--enable-native-access=ALL-UNNAMED`。この JDK では、付けないと CMake の設定が失敗する
-- `ANDROID_HOME` は `%LOCALAPPDATA%\Android\Sdk`
-- PATH に `%JAVA_HOME%\bin`、`%ANDROID_HOME%\platform-tools`、`%ANDROID_HOME%\emulator`
+- `JAVA_HOME` is the JDK bundled with Android Studio (`C:\Program Files\Android\Android Studio\jbr`)
+- `JAVA_TOOL_OPTIONS` is `--enable-native-access=ALL-UNNAMED`. Without it, CMake configuration fails on this JDK
+- `ANDROID_HOME` is `%LOCALAPPDATA%\Android\Sdk`
+- Add `%JAVA_HOME%\bin`, `%ANDROID_HOME%\platform-tools`, and `%ANDROID_HOME%\emulator` to PATH
 
-改行コードは LF のままにします。`core.autocrlf` で `gradlew` を CRLF に変換しません。
+Keep line endings as LF. Do not let `core.autocrlf` convert `gradlew` to CRLF.
 
-## 起動
+## Run
 
 ```powershell
 npx expo run:android
 ```
 
-初回は development build を作り、エミュレータか実機に載せます。CMake は Android SDK がビルド中に入れます。別途インストールは不要です。
+The first run builds a development build and installs it on an emulator or device. The Android SDK installs CMake during the build. A separate install is unnecessary.
 
-## 接続
+## Connection
 
-アプリの設定画面に、[minutes](https://github.com/plaodas/minutes) のベース URL とサービストークンを入れます。認証は `Authorization: Bearer` です。ログイン画面はありません。
+In the app's settings screen, enter the base URL and service token for [minutes](https://github.com/plaodas/minutes). Authentication is `Authorization: Bearer`. There is no login screen.
 
-minutes を WSL で動かし、Android エミュレータからつなぐときは、サーバー URL を `http://10.0.2.2:<minutes の公開ポート>` にします。
+When minutes runs in WSL and the Android emulator connects to it, set the server URL to `http://10.0.2.2:<minutes public port>`.
 
-## ライセンス
+## License
 
 [MIT](LICENSE)
