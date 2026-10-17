@@ -1,3 +1,4 @@
+import Settings from 'lucide-react-native/icons/settings';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
@@ -170,7 +171,13 @@ export default function Home({ focusedMemoId, onOpenSettings }: Props) {
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <Text style={styles.title}>Memoroku</Text>
-          <Pressable accessibilityRole="button" onPress={onOpenSettings}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="設定"
+            onPress={onOpenSettings}
+            style={styles.settingsButton}
+          >
+            <Settings color={colors.accent} size={16} strokeWidth={2.25} />
             <Text style={styles.settings}>設定</Text>
           </Pressable>
         </View>
@@ -275,6 +282,11 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 32,
     fontWeight: '700',
+  },
+  settingsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   settings: {
     color: colors.accent,
