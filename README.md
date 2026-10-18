@@ -8,6 +8,29 @@ The transcription backend is [minutes](https://github.com/plaodas/minutes). This
 
 The product promises are in [docs/promises.md](docs/promises.md).
 
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/images/app-main.png" width="240" alt="App home"><br>
+      App home
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/images/home-widget.png" width="240" alt="Home-screen widget"><br>
+      Home-screen widget
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/images/home-recording.png" width="240" alt="Icon long-press menu"><br>
+      Icon long-press menu
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/images/settings.png" width="240" alt="Settings"><br>
+      Settings
+    </td>
+  </tr>
+</table>
+
 ## Related repositories
 
 - [minutes](https://github.com/plaodas/minutes): the backend that transcribes audio. memoroku uploads recordings here.
