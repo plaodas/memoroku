@@ -6,7 +6,7 @@
 
 このリポジトリはスマホアプリだけです。文字起こしは `../minutes` の API を使います。minutes のコードは変更しません。二つのリポジトリは統合しません。
 
-話者分け、要約、Word 出力は呼びません。アップロードには `transcript_only=1` を付け、整形を待ちません。
+話者分け、要約、Word 出力は呼びません。アップロードには `transcript_only=1` を付け、整形を待ちません。端末内モードのときは minutes を呼ばず、`whisper.rn` の多言語 Base を端末に置きます。
 
 ## API
 
@@ -21,6 +21,8 @@ minutes への呼び出しは [app/api/minutes.ts](app/api/minutes.ts) に閉じ
 認証は `Authorization: Bearer` のサービストークンです。ベース URL とトークンは expo-secure-store に保存し、ホームの設定画面から入れます。ログイン画面は作りません。
 
 軽量エンドポイントへ切り替えるときは、`app/api/minutes.ts` と `docs/promises.md` の API の一文を更新します。画面、SQLite、ウィジェット、通知はそのままにします。
+
+端末内モードは上の三つの経路を使いません。文字起こしは [app/transcription/localWhisper.ts](app/transcription/localWhisper.ts) に閉じます。
 
 ## ネイティブ
 

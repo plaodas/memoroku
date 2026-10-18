@@ -60,7 +60,7 @@ export default function Home({ focusedMemoId, onOpenSettings }: Props) {
     }
     const [nextMemos, settings] = await Promise.all([getMemos(), loadMinutesSettings()]);
     setMemos(nextMemos);
-    setConfigured(Boolean(settings.baseUrl && settings.token));
+    setConfigured(settings.mode === 'device' || Boolean(settings.baseUrl && settings.token));
   }, []);
 
   useEffect(() => {
