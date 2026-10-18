@@ -8,6 +8,29 @@
 
 プロダクトの約束は [docs/promises.md](docs/promises.md) です。
 
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/images/app-main.png" width="240" alt="アプリメイン画面"><br>
+      アプリメイン画面
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/images/home-widget.png" width="240" alt="ウィジェットメモ表示"><br>
+      ウィジェットメモ表示
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/images/home-recording.png" width="240" alt="ホーム長押しメニュー"><br>
+      ホーム長押しメニュー
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/images/settings.png" width="240" alt="設定画面"><br>
+      設定画面
+    </td>
+  </tr>
+</table>
+
 ## 関連リポジトリ
 
 - [minutes](https://github.com/plaodas/minutes): 音声を文字起こしするバックエンド。memoroku は録音をここへ送る。

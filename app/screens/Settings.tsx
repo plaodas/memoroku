@@ -127,7 +127,7 @@ export default function Settings({ onClose }: Props) {
   return (
     <ScrollView contentContainerStyle={styles.screen} style={styles.scroll}>
       <View style={styles.header}>
-        <Text style={styles.title}>接続</Text>
+        <Text style={styles.title}>設定</Text>
         <Pressable accessibilityRole="button" onPress={onClose}>
           <Text style={styles.close}>閉じる</Text>
         </Pressable>
