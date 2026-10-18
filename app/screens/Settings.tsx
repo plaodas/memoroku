@@ -215,11 +215,12 @@ export default function Settings({ onClose }: Props) {
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <Pressable
         accessibilityRole="button"
-        disabled={saving}
+        accessibilityState={{ disabled: saving || downloading }}
+        disabled={saving || downloading}
         onPress={() => {
           onSave().catch(() => undefined);
         }}
-        style={styles.save}
+        style={[styles.save, saving || downloading ? styles.saveDisabled : null]}
       >
         <Text style={styles.saveLabel}>{saving ? '保存中…' : '保存'}</Text>
       </Pressable>
@@ -364,6 +365,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     borderRadius: 14,
     paddingVertical: 14,
+  },
+  saveDisabled: {
+    opacity: 0.4,
   },
   saveLabel: {
     color: '#FFFFFF',
