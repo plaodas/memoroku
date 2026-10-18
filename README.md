@@ -41,7 +41,7 @@ The product promises are in [docs/promises.md](docs/promises.md).
 - Records audio. The file stays in the device's storage and can be played from the list. After the microphone permission is granted, hold-to-record is the default
 - Uploads to minutes and waits until transcription finishes
 - Notifies when a memo is ready and shows a short line on the widget. A tap opens that memo
-- Deletes memos after 24 hours. They can also be deleted from the list, which removes the recording file
+- Normal memos disappear after 24 hours. A memo marked keep stays until it is deleted or keep is turned off. Turning keep off starts another 24 hours. Deleting a memo also removes its recording
 
 The widget has no record button. The widget does not call minutes.
 

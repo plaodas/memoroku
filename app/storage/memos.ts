@@ -15,6 +15,7 @@ export type Memo = {
   taskId: string | null;
   status: MemoStatus;
   transcript: string | null;
+  expiresAt: number | null;
 };
 
 type MemoRow = {
@@ -26,6 +27,7 @@ type MemoRow = {
   taskId: string | null;
   status: string;
   transcript: string | null;
+  expiresAt: number | null;
 };
 
 const STATUSES: MemoStatus[] = ['recording', 'uploading', 'transcribing', 'ready', 'failed'];
@@ -52,6 +54,7 @@ function toMemo(row: MemoRow): Memo {
     taskId: row.taskId,
     status: asStatus(row.status),
     transcript: row.transcript,
+    expiresAt: row.expiresAt,
   };
 }
 
@@ -80,6 +83,10 @@ async function ensureColumns(db: SQLite.SQLiteDatabase): Promise<void> {
   if (!names.has('transcript')) {
     await db.execAsync('ALTER TABLE memos ADD COLUMN transcript TEXT');
   }
+  if (!names.has('expiresAt')) {
+    await db.execAsync('ALTER TABLE memos ADD COLUMN expiresAt INTEGER');
+    await db.runAsync('UPDATE memos SET expiresAt = createdAt + ?', DAY_MS);
+  }
 }
 
 function getDatabase(): Promise<SQLite.SQLiteDatabase> {
@@ -95,7 +102,8 @@ function getDatabase(): Promise<SQLite.SQLiteDatabase> {
             durationMs INTEGER NOT NULL,
             taskId TEXT,
             status TEXT NOT NULL DEFAULT 'ready',
-            transcript TEXT
+            transcript TEXT,
+            expiresAt INTEGER
           );
         `);
         await ensureColumns(db);
@@ -109,7 +117,8 @@ function getDatabase(): Promise<SQLite.SQLiteDatabase> {
   return database;
 }
 
-const MEMO_COLUMNS = 'id, title, createdAt, audioUri, durationMs, taskId, status, transcript';
+const MEMO_COLUMNS = 'id, title, createdAt, audioUri, durationMs, taskId, status, transcript, expiresAt';
+const KEPT_FIRST = '(expiresAt IS NULL) DESC, createdAt DESC';
 
 export async function addMemo(input: {
   title: string;
@@ -117,19 +126,21 @@ export async function addMemo(input: {
   durationMs: number;
   status?: MemoStatus;
 }): Promise<Memo> {
+  const createdAt = Date.now();
   const memo: Memo = {
     id: createId(),
     title: input.title,
-    createdAt: Date.now(),
+    createdAt,
     audioUri: input.audioUri,
     durationMs: input.durationMs,
     taskId: null,
     status: input.status ?? 'uploading',
     transcript: null,
+    expiresAt: createdAt + DAY_MS,
   };
   const db = await getDatabase();
   await db.runAsync(
-    `INSERT INTO memos (${MEMO_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO memos (${MEMO_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     memo.id,
     memo.title,
     memo.createdAt,
@@ -138,6 +149,7 @@ export async function addMemo(input: {
     memo.taskId,
     memo.status,
     memo.transcript,
+    memo.expiresAt,
   );
   emitMemos();
   return memo;
@@ -146,7 +158,7 @@ export async function addMemo(input: {
 export async function getMemos(): Promise<Memo[]> {
   const db = await getDatabase();
   const rows = await db.getAllAsync<MemoRow>(
-    `SELECT ${MEMO_COLUMNS} FROM memos ORDER BY createdAt DESC`,
+    `SELECT ${MEMO_COLUMNS} FROM memos ORDER BY ${KEPT_FIRST}`,
   );
   return rows.map(toMemo);
 }
@@ -173,7 +185,7 @@ export async function getRecentReadyMemos(limit = 3): Promise<Memo[]> {
   const rows = await db.getAllAsync<MemoRow>(
     `SELECT ${MEMO_COLUMNS} FROM memos
      WHERE status = 'ready' AND transcript IS NOT NULL AND length(trim(transcript)) > 0
-     ORDER BY createdAt DESC
+     ORDER BY ${KEPT_FIRST}
      LIMIT ?`,
     limit,
   );
@@ -232,14 +244,22 @@ export async function deleteMemo(id: string): Promise<void> {
   emitMemos();
 }
 
+export async function setMemoKept(id: string, kept: boolean, now = Date.now()): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync('UPDATE memos SET expiresAt = ? WHERE id = ?', kept ? null : now + DAY_MS, id);
+  emitMemos();
+}
+
 export async function deleteOldMemos(now = Date.now()): Promise<number> {
   const db = await getDatabase();
-  const cutoff = now - DAY_MS;
   const rows = await db.getAllAsync<{ audioUri: string | null }>(
-    'SELECT audioUri FROM memos WHERE createdAt < ?',
-    cutoff,
+    'SELECT audioUri FROM memos WHERE expiresAt IS NOT NULL AND expiresAt <= ?',
+    now,
   );
-  const result = await db.runAsync('DELETE FROM memos WHERE createdAt < ?', cutoff);
+  const result = await db.runAsync(
+    'DELETE FROM memos WHERE expiresAt IS NOT NULL AND expiresAt <= ?',
+    now,
+  );
   for (const row of rows) {
     deleteAudioFile(row.audioUri);
   }
