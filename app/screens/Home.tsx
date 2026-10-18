@@ -8,7 +8,13 @@ import { RecordButton } from '../components/RecordButton';
 import { usePlayback } from '../hooks/usePlayback';
 import { microphoneGranted, useRecorder } from '../hooks/useRecorder';
 import { keepRecording } from '../storage/audioFiles';
-import { loadHoldToRecord, loadMinutesSettings, saveHoldToRecord } from '../storage/settings';
+import {
+  loadHoldToRecord,
+  loadMinutesSettings,
+  loadRecordHintSeen,
+  saveHoldToRecord,
+  saveRecordHintSeen,
+} from '../storage/settings';
 import {
   addMemo,
   deleteMemo,
@@ -39,7 +45,9 @@ export default function Home({ focusedMemoId, onOpenSettings, recordRequest }: P
   const [micAllowed, setMicAllowed] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(focusedMemoId);
   const [shortcutRecording, setShortcutRecording] = useState(false);
+  const [hintSeen, setHintSeen] = useState<boolean | null>(null);
   const savedHold = useRef<boolean | null>(null);
+  const hintDismissed = useRef(false);
   const shortcutTap = useRef(false);
   const shortcutSawRecording = useRef(false);
   const startFromShortcut = useRef(recorder.start);
@@ -73,6 +81,33 @@ export default function Home({ focusedMemoId, onOpenSettings, recordRequest }: P
     setMemos(nextMemos);
     setConfigured(settings.mode === 'device' || Boolean(settings.baseUrl && settings.token));
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadRecordHintSeen()
+      .then((seen) => {
+        if (!cancelled && !hintDismissed.current) {
+          setHintSeen(seen);
+        }
+      })
+      .catch(() => {
+        if (!cancelled && !hintDismissed.current) {
+          setHintSeen(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  function dismissHint() {
+    if (hintDismissed.current) {
+      return;
+    }
+    hintDismissed.current = true;
+    setHintSeen(true);
+    saveRecordHintSeen().catch(() => undefined);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -183,11 +218,13 @@ export default function Home({ focusedMemoId, onOpenSettings, recordRequest }: P
       await saveRecording();
       return;
     }
+    dismissHint();
     playback.stop();
     await recorder.start();
   }
 
   function onHoldStart() {
+    dismissHint();
     playback.stop();
     recorder.start().catch(() => undefined);
   }
@@ -318,6 +355,17 @@ export default function Home({ focusedMemoId, onOpenSettings, recordRequest }: P
           />
         </View>
       ) : null}
+      {hintSeen === false && !recorder.recording && !shortcutRecording ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="タップで開始、もう一度で終了。押しながら録音もあります。タップして閉じる"
+          onPress={dismissHint}
+          style={styles.hint}
+        >
+          <Text style={styles.hintText}>タップで開始、もう一度で終了</Text>
+          <Text style={styles.hintText}>押しながら録音もあります</Text>
+        </Pressable>
+      ) : null}
       <RecordButton
         recording={recorder.recording}
         elapsedMs={recorder.elapsedMs}
@@ -403,5 +451,19 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 14,
     fontWeight: '600',
+  },
+  hint: {
+    alignSelf: 'center',
+    backgroundColor: colors.accentSoft,
+    borderRadius: 12,
+    gap: 2,
+    marginBottom: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  hintText: {
+    color: colors.text,
+    fontSize: 13,
+    textAlign: 'center',
   },
 });

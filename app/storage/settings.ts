@@ -3,6 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 const URL_KEY = 'memoroku.minutes.baseUrl';
 const TOKEN_KEY = 'memoroku.minutes.token';
 const HOLD_KEY = 'memoroku.record.hold';
+const HINT_KEY = 'memoroku.record.hintSeen';
 const MODE_KEY = 'memoroku.transcription.mode';
 
 export type TranscriptionMode = 'minutes' | 'device';
@@ -51,4 +52,13 @@ export async function loadHoldToRecord(): Promise<boolean | null> {
 
 export async function saveHoldToRecord(enabled: boolean): Promise<void> {
   await SecureStore.setItemAsync(HOLD_KEY, enabled ? '1' : '0');
+}
+
+export async function loadRecordHintSeen(): Promise<boolean> {
+  const value = await SecureStore.getItemAsync(HINT_KEY);
+  return value === '1';
+}
+
+export async function saveRecordHintSeen(): Promise<void> {
+  await SecureStore.setItemAsync(HINT_KEY, '1');
 }
