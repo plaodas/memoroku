@@ -77,6 +77,11 @@ class NativeRecorderModule : Module() {
         0.0
       }
     }
+
+    AsyncFunction("convertToWav") { inputUri: String ->
+      val context = appContext.reactContext ?: error("React context is unavailable")
+      convertM4aToWav(context.cacheDir, inputUri)
+    }
   }
 
   private fun createRecorder(context: android.content.Context): MediaRecorder {

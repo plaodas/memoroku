@@ -1,8 +1,10 @@
 import { MinutesError, fetchTranscript, upload, waitUntilReady } from '../api/minutes';
 import { notifyMemoReady } from '../notifications';
 import { deleteOldMemos, getMemo, getPendingMemos, updateMemo } from '../storage/memos';
+import { loadMinutesSettings } from '../storage/settings';
 import { publishLatestMemo } from '../widgets/publish';
 import { firstSentence } from '../widgets/sentence';
+import { transcribeOnDevice } from './localWhisper';
 
 const jobs = new Map<string, Promise<void>>();
 
@@ -45,12 +47,43 @@ function titleFromSentence(sentence: string): string {
   return stripped.slice(0, 40) || '音声メモ';
 }
 
+async function finish(memoId: string, transcript: string): Promise<void> {
+  const current = await getMemo(memoId);
+  if (!current) {
+    await publishLatestMemo();
+    return;
+  }
+  const sentence = firstSentence(transcript);
+  await updateMemo(memoId, {
+    status: 'ready',
+    transcript,
+    title: titleFromSentence(sentence),
+  });
+  const saved = await getMemo(memoId);
+  if (!saved) {
+    await publishLatestMemo();
+    return;
+  }
+  await publishLatestMemo();
+  await notifyMemoReady(memoId, sentence || titleFromSentence(sentence));
+}
+
 async function run(memoId: string): Promise<void> {
   const memo = await getMemo(memoId);
   if (!memo || memo.status === 'ready' || memo.status === 'failed') {
     return;
   }
   try {
+    const settings = await loadMinutesSettings();
+    if (settings.mode === 'device') {
+      if (!memo.audioUri) {
+        await updateMemo(memoId, { status: 'failed' });
+        return;
+      }
+      await updateMemo(memoId, { status: 'transcribing' });
+      await finish(memoId, await transcribeOnDevice(memo.audioUri));
+      return;
+    }
     let taskId = memo.taskId;
     if (!taskId) {
       if (!memo.audioUri) {
@@ -64,25 +97,7 @@ async function run(memoId: string): Promise<void> {
       await updateMemo(memoId, { status: 'transcribing' });
     }
     await waitUntilReady(taskId);
-    const transcript = await fetchTranscript(taskId);
-    const current = await getMemo(memoId);
-    if (!current) {
-      await publishLatestMemo();
-      return;
-    }
-    const sentence = firstSentence(transcript);
-    await updateMemo(memoId, {
-      status: 'ready',
-      transcript,
-      title: titleFromSentence(sentence),
-    });
-    const saved = await getMemo(memoId);
-    if (!saved) {
-      await publishLatestMemo();
-      return;
-    }
-    await publishLatestMemo();
-    await notifyMemoReady(memoId, sentence || titleFromSentence(sentence));
+    await finish(memoId, await fetchTranscript(taskId));
   } catch (error) {
     reportError(`transcription ${memoId}`, error);
     if (error instanceof MinutesError && error.kind === 'failed') {

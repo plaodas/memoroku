@@ -226,29 +226,31 @@ export function Card({
           <Pressable onPress={onSelect} style={styles.card}>
             <Text style={styles.title}>{heading}</Text>
             {showDetail ? <Text style={styles.body}>{detail}</Text> : null}
-            <View style={styles.actions}>
-              {audioUri ? (
+            <View style={styles.footer}>
+              <View style={styles.actions}>
+                {audioUri ? (
+                  <ActionButton
+                    label={playing ? '停止' : '再生'}
+                    icon={
+                      playing ? (
+                        <CircleStop color={colors.accent} size={16} strokeWidth={2.25} />
+                      ) : (
+                        <Play color={colors.accent} size={16} strokeWidth={2.25} />
+                      )
+                    }
+                    onPress={onTogglePlay}
+                  />
+                ) : null}
                 <ActionButton
-                  label={playing ? '停止' : '再生'}
-                  icon={
-                    playing ? (
-                      <CircleStop color={colors.accent} size={16} strokeWidth={2.25} />
-                    ) : (
-                      <Play color={colors.accent} size={16} strokeWidth={2.25} />
-                    )
-                  }
-                  onPress={onTogglePlay}
+                  label="削除"
+                  icon={<Trash2 color={colors.accent} size={16} strokeWidth={2.25} />}
+                  onPress={onDelete}
                 />
-              ) : null}
-              <ActionButton
-                label="削除"
-                icon={<Trash2 color={colors.accent} size={16} strokeWidth={2.25} />}
-                onPress={onDelete}
-              />
+              </View>
+              <Text style={styles.meta} numberOfLines={1}>
+                {formatTime(createdAt)} · {formatDuration(durationMs)}
+              </Text>
             </View>
-            <Text style={styles.meta}>
-              {formatTime(createdAt)} · {formatDuration(durationMs)}
-            </Text>
           </Pressable>
         </Animated.View>
       </View>
@@ -331,8 +333,15 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22,
   },
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
   actions: {
     flexDirection: 'row',
+    flexShrink: 0,
     gap: 16,
   },
   action: {
@@ -348,5 +357,7 @@ const styles = StyleSheet.create({
   meta: {
     color: colors.muted,
     fontSize: 13,
+    flexShrink: 1,
+    textAlign: 'right',
   },
 });

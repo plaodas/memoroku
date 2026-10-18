@@ -17,14 +17,17 @@ if (Platform.OS === 'android') {
   });
 }
 
+export async function prepareNotifications(): Promise<void> {
+  const current = await Notifications.getPermissionsAsync();
+  if (current.granted || current.canAskAgain === false) {
+    return;
+  }
+  await Notifications.requestPermissionsAsync();
+}
+
 export async function notifyMemoReady(memoId: string, body: string): Promise<void> {
   const current = await Notifications.getPermissionsAsync();
-  let granted = current.granted;
-  if (!granted) {
-    const requested = await Notifications.requestPermissionsAsync();
-    granted = requested.granted;
-  }
-  if (!granted) {
+  if (!current.granted) {
     return;
   }
   await Notifications.scheduleNotificationAsync({

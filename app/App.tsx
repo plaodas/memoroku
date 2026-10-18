@@ -9,6 +9,7 @@ if (Platform.OS === 'ios') {
 }
 import Home from './screens/Home';
 import Settings from './screens/Settings';
+import { prepareNotifications } from './notifications';
 import { resumePendingTranscriptions } from './transcription/pipeline';
 
 export default function App() {
@@ -23,6 +24,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    prepareNotifications().catch(() => undefined);
     resumePendingTranscriptions().catch(() => undefined);
   }, []);
 

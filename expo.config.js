@@ -7,6 +7,7 @@ const config = {
   scheme: 'memoroku',
   version: '1.0.0',
   orientation: 'portrait',
+  icon: './assets/icon.png',
   ios: {
     bundleIdentifier: 'com.memoroku',
     supportsTablet: true,
@@ -24,6 +25,11 @@ const config = {
     package: 'com.memoroku',
     permissions: ['RECORD_AUDIO'],
     usesCleartextTraffic: true,
+    adaptiveIcon: {
+      foregroundImage: './assets/adaptive-icon.png',
+      monochromeImage: './assets/monochrome-icon.png',
+      backgroundColor: '#12aaa6',
+    },
   },
   plugins: [
     [

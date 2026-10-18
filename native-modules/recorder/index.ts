@@ -5,6 +5,7 @@ type NativeRecorderModule = {
   stopRecording(): Promise<string | null>;
   readLevel(): Promise<number>;
   microphoneGranted(): Promise<boolean>;
+  convertToWav(uri: string): Promise<string>;
 };
 
 const NativeRecorder = requireNativeModule<NativeRecorderModule>('NativeRecorder');
@@ -23,4 +24,8 @@ export function readRecordingLevel(): Promise<number> {
 
 export function microphoneGranted(): Promise<boolean> {
   return NativeRecorder.microphoneGranted();
+}
+
+export function convertRecordingToWav(uri: string): Promise<string> {
+  return NativeRecorder.convertToWav(uri);
 }

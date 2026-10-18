@@ -53,6 +53,10 @@ public final class NativeRecorderModule: Module {
       let clamped = min(0, max(-50, decibels))
       return Double((clamped + 50) / 50)
     }.runOnQueue(.main)
+
+    AsyncFunction("convertToWav") { (path: String) -> String in
+      try convertRecordingToWav(path)
+    }
   }
 }
 
