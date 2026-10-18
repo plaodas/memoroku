@@ -1,3 +1,4 @@
+import Bookmark from 'lucide-react-native/icons/bookmark';
 import CircleStop from 'lucide-react-native/icons/circle-stop';
 import Play from 'lucide-react-native/icons/play';
 import Trash2 from 'lucide-react-native/icons/trash';
@@ -26,6 +27,8 @@ type Props = {
   playing: boolean;
   onTogglePlay: () => void;
   onDelete: () => void;
+  onToggleKeep: () => void;
+  kept: boolean;
   onSelect: () => void;
   focused?: boolean;
 };
@@ -81,6 +84,8 @@ export function Card({
   playing,
   onTogglePlay,
   onDelete,
+  onToggleKeep,
+  kept,
   onSelect,
   focused,
 }: Props) {
@@ -224,7 +229,24 @@ export function Card({
         </View>
         <Animated.View style={{ transform: [{ translateX }] }} {...pan.panHandlers}>
           <Pressable onPress={onSelect} style={styles.card}>
-            <Text style={styles.title}>{heading}</Text>
+            <View style={styles.titleRow}>
+              <Text style={styles.title}>{heading}</Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="残す"
+                accessibilityState={{ selected: kept }}
+                hitSlop={8}
+                onPress={onToggleKeep}
+                style={styles.keep}
+              >
+                <Bookmark
+                  color={kept ? colors.accent : colors.muted}
+                  fill={kept ? colors.accent : 'transparent'}
+                  size={18}
+                  strokeWidth={2.25}
+                />
+              </Pressable>
+            </View>
             {showDetail ? <Text style={styles.body}>{detail}</Text> : null}
             <View style={styles.footer}>
               <View style={styles.actions}>
@@ -323,10 +345,19 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     gap: 6,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
   title: {
+    flex: 1,
     color: colors.text,
     fontSize: 17,
     fontWeight: '600',
+  },
+  keep: {
+    marginTop: 1,
   },
   body: {
     color: colors.text,

@@ -14,6 +14,7 @@ import {
   deleteMemo,
   deleteOldMemos,
   getMemos,
+  setMemoKept,
   subscribeMemos,
   type Memo,
 } from '../storage/memos';
@@ -227,6 +228,11 @@ export default function Home({ focusedMemoId, onOpenSettings, recordRequest }: P
     await publishLatestMemo();
   }
 
+  async function onToggleKeep(memo: Memo) {
+    await setMemoKept(memo.id, memo.expiresAt !== null);
+    await publishLatestMemo();
+  }
+
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
@@ -242,7 +248,7 @@ export default function Home({ focusedMemoId, onOpenSettings, recordRequest }: P
             <Text style={styles.settings}>設定</Text>
           </Pressable>
         </View>
-        <Text style={styles.subtitle}>メモは 24 時間で消えます。</Text>
+        <Text style={styles.subtitle}>通常のメモは24時間で消えます。</Text>
         {configured ? null : (
           <Text style={styles.warning}>サーバーの URL とトークンを設定してください。</Text>
         )}
@@ -285,6 +291,11 @@ export default function Home({ focusedMemoId, onOpenSettings, recordRequest }: P
               onDelete={() => {
                 setSelectedId(item.id);
                 confirmDelete(item);
+              }}
+              kept={item.expiresAt === null}
+              onToggleKeep={() => {
+                setSelectedId(item.id);
+                onToggleKeep(item).catch(() => undefined);
               }}
               onSelect={() => setSelectedId(item.id)}
               focused={item.id === selectedId}

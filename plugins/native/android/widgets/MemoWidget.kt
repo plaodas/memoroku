@@ -14,19 +14,31 @@ import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionStartActivity
+import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
+import androidx.glance.layout.Alignment
+import androidx.glance.layout.Box
 import androidx.glance.layout.Column
+import androidx.glance.layout.Row
+import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.padding
+import androidx.glance.layout.size
+import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 
+private val paper = Color(0xFFF6F3EE)
+private val ink = Color(0xFF1A1A1A)
+private val mark = Color(0xFF0EA5A1)
 private val horizontalPadding = 12.dp
 private val verticalPadding = 12.dp
+private val rowPadding = 4.dp
+private val markSize = 6.dp
 
 class MemoWidget : GlanceAppWidget() {
   override val sizeMode: SizeMode = SizeMode.Exact
@@ -40,13 +52,12 @@ class MemoWidget : GlanceAppWidget() {
 
 @Composable
 private fun MemoCard(memos: List<WidgetMemo>, packageName: String) {
-  val fontSp = memoFontSize(longestLine(memos))
-  val style = memoTextStyle(fontSp)
+  val fontSp = memoFontSize()
   val visible = memos.take(rowsThatFit(fontSp))
   Column(
     modifier = GlanceModifier
       .fillMaxSize()
-      .background(ColorProvider(Color(0xFFF6F3EE)))
+      .background(ColorProvider(paper))
       .padding(start = horizontalPadding, top = verticalPadding, end = horizontalPadding, bottom = verticalPadding),
   ) {
     if (visible.isEmpty()) {
@@ -54,50 +65,69 @@ private fun MemoCard(memos: List<WidgetMemo>, packageName: String) {
         text = "メモはまだありません",
         maxLines = 2,
         modifier = GlanceModifier.fillMaxWidth().clickable(openMemo(packageName, "memoroku://")),
-        style = style,
+        style = memoTextStyle(fontSp, emphasized = false),
       )
     } else {
-      visible.forEach { memo ->
-        Text(
-          text = memo.text,
-          maxLines = 1,
-          modifier = GlanceModifier
-            .fillMaxWidth()
-            .padding(top = 2.dp, bottom = 2.dp)
-            .clickable(openMemo(packageName, "memoroku://memo/${memo.memoId}")),
-          style = style,
+      visible.forEachIndexed { index, memo ->
+        MemoLine(
+          memo = memo,
+          emphasized = index == 0,
+          fontSp = fontSp,
+          packageName = packageName,
         )
       }
     }
   }
 }
 
-private fun longestLine(memos: List<WidgetMemo>): Int {
-  if (memos.isEmpty()) {
-    return "メモはまだありません".length
+@Composable
+private fun MemoLine(memo: WidgetMemo, emphasized: Boolean, fontSp: Float, packageName: String) {
+  Row(
+    modifier = GlanceModifier
+      .fillMaxWidth()
+      .padding(top = rowPadding, bottom = rowPadding)
+      .clickable(openMemo(packageName, "memoroku://memo/${memo.memoId}")),
+    verticalAlignment = Alignment.CenterVertically,
+  ) {
+    Box(
+      modifier = GlanceModifier
+        .size(markSize)
+        .cornerRadius(markSize / 2)
+        .background(ColorProvider(mark)),
+    ) {}
+    Spacer(modifier = GlanceModifier.width(8.dp))
+    Text(
+      text = memo.text,
+      maxLines = 1,
+      modifier = GlanceModifier.defaultWeight(),
+      style = memoTextStyle(fontSp, emphasized),
+    )
   }
-  return memos.maxOf { it.text.length }
 }
 
 @Composable
 private fun rowsThatFit(fontSp: Float): Int {
   val height = LocalSize.current.height.value
-  val row = fontSp * 1.55f + 4f
+  val row = fontSp * 1.35f + rowPadding.value * 2
   val available = (height - verticalPadding.value * 2).coerceAtLeast(row)
   return (available / row).toInt().coerceAtLeast(1)
 }
 
 @Composable
-private fun memoFontSize(charCount: Int): Float {
-  val inner = (LocalSize.current.width - horizontalPadding * 2).value.coerceAtLeast(48f)
-  return (inner / charCount.coerceAtLeast(1) * 0.92f).coerceIn(11f, 16f)
+private fun memoFontSize(): Float {
+  val width = LocalSize.current.width.value
+  return when {
+    width >= 280f -> 16f
+    width >= 180f -> 14f
+    else -> 13f
+  }
 }
 
-private fun memoTextStyle(fontSp: Float): TextStyle {
+private fun memoTextStyle(fontSp: Float, emphasized: Boolean): TextStyle {
   return TextStyle(
-    color = ColorProvider(Color(0xFF1A1A1A)),
+    color = ColorProvider(ink),
     fontSize = fontSp.sp,
-    fontWeight = FontWeight.Medium,
+    fontWeight = if (emphasized) FontWeight.Bold else FontWeight.Normal,
   )
 }
 
