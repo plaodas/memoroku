@@ -20,7 +20,7 @@ type WhisperModule = {
 const { initWhisper } = require('whisper.rn') as WhisperModule;
 
 const MODEL_URL = 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin';
-const MIN_MODEL_BYTES = 100 * 1024 * 1024;
+const MODEL_BYTES = 147951465;
 
 function modelDirectory(): Directory {
   const directory = new Directory(Paths.document, 'whisper');
@@ -42,14 +42,30 @@ function modelSize(file: File): number {
 }
 
 export function whisperModelReady(): boolean {
-  return modelSize(modelFile()) >= MIN_MODEL_BYTES;
+  return modelSize(modelFile()) === MODEL_BYTES;
 }
 
 function removeIncompleteModel(): void {
   const file = modelFile();
-  if (file.exists && modelSize(file) < MIN_MODEL_BYTES) {
+  if (file.exists && modelSize(file) !== MODEL_BYTES) {
     file.delete();
   }
+}
+
+function failureMessage(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  if (typeof error === 'string' && error.length > 0) {
+    return error;
+  }
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = error.message;
+    if (typeof message === 'string' && message.length > 0) {
+      return message;
+    }
+  }
+  return '端末内の文字起こしに失敗しました。';
 }
 
 export async function downloadWhisperModel(
@@ -128,8 +144,7 @@ export async function transcribeOnDevice(audioUri: string): Promise<string> {
     if (error instanceof MinutesError) {
       throw error;
     }
-    const message = error instanceof Error ? error.message : '端末内の文字起こしに失敗しました。';
-    throw new MinutesError(message, 'failed');
+    throw new MinutesError(failureMessage(error), 'failed');
   } finally {
     if (wavUri) {
       deleteConvertedWav(wavUri);
