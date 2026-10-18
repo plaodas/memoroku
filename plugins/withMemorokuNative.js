@@ -7,6 +7,7 @@ const {
   withDangerousMod,
   withMainApplication,
   withProjectBuildGradle,
+  withMainActivity,
   withStringsXml,
   withXcodeProject,
 } = require('@expo/config-plugins');
@@ -159,6 +160,66 @@ function withMemoWidgetReceiver(config) {
   });
 }
 
+function withRecordShortcut(config) {
+  config = withStringsXml(config, (config) => {
+    config.modResults = AndroidConfig.Strings.setStringItem(
+      [
+        {
+          $: { name: 'shortcut_record' },
+          _: '録音',
+        },
+      ],
+      config.modResults,
+    );
+    return config;
+  });
+
+  config = withAndroidManifest(config, (config) => {
+    const application = AndroidConfig.Manifest.getMainApplicationOrThrow(config.modResults);
+    const activity = application.activity?.find((item) => item.$['android:name'] === '.MainActivity');
+    if (!activity) {
+      return config;
+    }
+    activity['meta-data'] = activity['meta-data'] ?? [];
+    const name = 'android.app.shortcuts';
+    const exists = activity['meta-data'].some((item) => item.$['android:name'] === name);
+    if (!exists) {
+      activity['meta-data'].push({
+        $: {
+          'android:name': name,
+          'android:resource': '@xml/shortcuts',
+        },
+      });
+    }
+    return config;
+  });
+
+  return withMainActivity(config, (config) => {
+    let contents = config.modResults.contents;
+    if (contents.includes('RecordingSession.startFromIntent')) {
+      return config;
+    }
+    if (!contents.includes('import android.content.Intent')) {
+      contents = contents.replace('import android.os.Build', 'import android.content.Intent\nimport android.os.Build');
+    }
+    contents = contents.replace(
+      'super.onCreate(null)',
+      'super.onCreate(null)\n    expo.modules.memorokurecorder.RecordingSession.startFromIntent(this, intent)',
+    );
+    const hook = `
+  override fun onNewIntent(intent: Intent) {
+    super.onNewIntent(intent)
+    setIntent(intent)
+    expo.modules.memorokurecorder.RecordingSession.startFromIntent(this, intent)
+  }
+
+`;
+    contents = contents.replace('  override fun getMainComponentName()', `${hook}  override fun getMainComponentName()`);
+    config.modResults.contents = contents;
+    return config;
+  });
+}
+
 function withWidgetDescription(config) {
   return withStringsXml(config, (config) => {
     config.modResults = AndroidConfig.Strings.setStringItem(
@@ -242,6 +303,7 @@ function withMemorokuNative(config) {
   config = withAndroidNativeDeps(config);
   config = withCleanupSchedule(config);
   config = withMemoWidgetReceiver(config);
+  config = withRecordShortcut(config);
   config = withWidgetDescription(config);
   config = withIosNativeSources(config);
   return config;

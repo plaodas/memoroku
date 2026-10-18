@@ -4,6 +4,7 @@ import { PermissionsAndroid, Platform } from 'react-native';
 import {
   microphoneGranted as iosMicrophoneGranted,
   readRecordingLevel,
+  recordingStartedAt,
   startRecording,
   stopRecording,
 } from '../../native-modules/recorder';
@@ -84,9 +85,10 @@ export function useRecorder() {
         }
         return 'cancelled' as const;
       }
-      startedAt.current = Date.now();
+      const nativeStartedAt = await recordingStartedAt();
+      startedAt.current = nativeStartedAt > 0 ? nativeStartedAt : Date.now();
       active.current = true;
-      setElapsedMs(0);
+      setElapsedMs(Math.max(0, Date.now() - startedAt.current));
       setRecording(true);
       return 'started' as const;
     } catch (cause) {

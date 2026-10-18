@@ -1,10 +1,12 @@
 import { requireNativeModule } from 'expo';
+import { Platform } from 'react-native';
 
 type NativeRecorderModule = {
   startRecording(): Promise<boolean>;
   stopRecording(): Promise<string | null>;
   readLevel(): Promise<number>;
   microphoneGranted(): Promise<boolean>;
+  recordingStartedAt(): Promise<number>;
   convertToWav(uri: string): Promise<string>;
 };
 
@@ -20,6 +22,13 @@ export function stopRecording(): Promise<string | null> {
 
 export function readRecordingLevel(): Promise<number> {
   return NativeRecorder.readLevel();
+}
+
+export function recordingStartedAt(): Promise<number> {
+  if (Platform.OS !== 'android') {
+    return Promise.resolve(0);
+  }
+  return NativeRecorder.recordingStartedAt();
 }
 
 export function microphoneGranted(): Promise<boolean> {

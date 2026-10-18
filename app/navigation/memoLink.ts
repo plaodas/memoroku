@@ -18,6 +18,29 @@ export function memoIdFromUrl(url: string | null): string | null {
   }
 }
 
+export function isRecordUrl(url: string | null): boolean {
+  if (!url) {
+    return false;
+  }
+  return url === 'memoroku://record' || url.startsWith('memoroku://record?');
+}
+
+export function listenForRecordStarts(onRecord: () => void): () => void {
+  const openUrl = (url: string | null) => {
+    if (isRecordUrl(url)) {
+      onRecord();
+    }
+  };
+
+  const linkSubscription = Linking.addEventListener('url', (event) => {
+    openUrl(event.url);
+  });
+  void Linking.getInitialURL().then(openUrl);
+  return () => {
+    linkSubscription.remove();
+  };
+}
+
 export function listenForMemoOpens(onMemo: (memoId: string) => void): () => void {
   const openUrl = (url: string | null) => {
     const memoId = memoIdFromUrl(url);

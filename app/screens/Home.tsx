@@ -24,9 +24,10 @@ import { publishLatestMemo } from '../widgets/publish';
 type Props = {
   focusedMemoId: string | null;
   onOpenSettings: () => void;
+  recordRequest: number;
 };
 
-export default function Home({ focusedMemoId, onOpenSettings }: Props) {
+export default function Home({ focusedMemoId, onOpenSettings, recordRequest }: Props) {
   const recorder = useRecorder();
   const playback = usePlayback();
   const listRef = useRef<FlatList<Memo>>(null);
@@ -36,7 +37,16 @@ export default function Home({ focusedMemoId, onOpenSettings }: Props) {
   const [holdMode, setHoldMode] = useState(false);
   const [micAllowed, setMicAllowed] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(focusedMemoId);
+  const [shortcutRecording, setShortcutRecording] = useState(false);
   const savedHold = useRef<boolean | null>(null);
+  const shortcutTap = useRef(false);
+  const shortcutSawRecording = useRef(false);
+  const startFromShortcut = useRef(recorder.start);
+  const stopPlayback = useRef(playback.stop);
+  const recordingNow = useRef(recorder.recording);
+  startFromShortcut.current = recorder.start;
+  stopPlayback.current = playback.stop;
+  recordingNow.current = recorder.recording;
 
   useEffect(() => {
     setSelectedId(focusedMemoId);
@@ -72,7 +82,9 @@ export default function Home({ focusedMemoId, onOpenSettings }: Props) {
         }
         savedHold.current = saved;
         setMicAllowed(granted);
-        setHoldMode(saved ?? granted);
+        if (!shortcutTap.current) {
+          setHoldMode(saved ?? granted);
+        }
       })
       .catch(() => undefined);
     return () => {
@@ -80,19 +92,65 @@ export default function Home({ focusedMemoId, onOpenSettings }: Props) {
     };
   }, []);
 
+  function restoreHoldMode() {
+    shortcutTap.current = false;
+    shortcutSawRecording.current = false;
+    setShortcutRecording(false);
+    if (savedHold.current === null) {
+      microphoneGranted()
+        .then((granted) => {
+          if (!shortcutTap.current) {
+            setHoldMode(granted);
+          }
+        })
+        .catch(() => undefined);
+      return;
+    }
+    setHoldMode(savedHold.current);
+  }
+
   useEffect(() => {
     if (recorder.recording) {
+      if (shortcutTap.current) {
+        shortcutSawRecording.current = true;
+        setHoldMode(false);
+      }
       return;
+    }
+    if (shortcutTap.current && shortcutSawRecording.current) {
+      restoreHoldMode();
     }
     microphoneGranted()
       .then((granted) => {
         setMicAllowed(granted);
-        if (savedHold.current === null) {
-          setHoldMode(granted);
+        if (shortcutTap.current || savedHold.current !== null) {
+          return;
         }
+        setHoldMode(granted);
       })
       .catch(() => undefined);
   }, [recorder.recording]);
+
+  useEffect(() => {
+    if (!recordRequest) {
+      return;
+    }
+    shortcutTap.current = true;
+    shortcutSawRecording.current = recordingNow.current;
+    setShortcutRecording(true);
+    setHoldMode(false);
+    stopPlayback.current();
+    startFromShortcut
+      .current()
+      .then((result) => {
+        if (result !== 'started') {
+          restoreHoldMode();
+        }
+      })
+      .catch(() => {
+        restoreHoldMode();
+      });
+  }, [recordRequest]);
 
   useEffect(() => {
     const unsubscribe = subscribeMemos(() => {
@@ -142,6 +200,9 @@ export default function Home({ focusedMemoId, onOpenSettings }: Props) {
   }
 
   function onToggleHold(next: boolean) {
+    if (shortcutTap.current) {
+      return;
+    }
     savedHold.current = next;
     setHoldMode(next);
     saveHoldToRecord(next).catch(() => undefined);
@@ -238,7 +299,7 @@ export default function Home({ focusedMemoId, onOpenSettings }: Props) {
           <Text style={styles.modeLabel}>押しながら録音</Text>
           <Switch
             accessibilityLabel="押しながら録音"
-            disabled={recorder.recording}
+            disabled={recorder.recording || shortcutRecording}
             onValueChange={onToggleHold}
             thumbColor={colors.surface}
             trackColor={{ false: colors.line, true: colors.accent }}
@@ -250,7 +311,7 @@ export default function Home({ focusedMemoId, onOpenSettings }: Props) {
         recording={recorder.recording}
         elapsedMs={recorder.elapsedMs}
         levels={recorder.levels}
-        holdMode={holdMode}
+        holdMode={holdMode && !shortcutRecording}
         onPress={() => {
           onPressRecord().catch(() => undefined);
         }}
