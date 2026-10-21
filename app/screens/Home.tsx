@@ -1,6 +1,7 @@
 import Settings from 'lucide-react-native/icons/settings';
+import Share2 from 'lucide-react-native/icons/share-2';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, FlatList, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, FlatList, Pressable, Share, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { Card, closeSwipedCards } from '../components/Card';
 import { FadeIn } from '../components/FadeIn';
@@ -27,6 +28,7 @@ import {
 } from '../storage/memos';
 import { transcribeMemo } from '../transcription/pipeline';
 import { colors } from '../theme';
+import { formatTime } from '../utils/formatTime';
 import { publishLatestMemo } from '../widgets/publish';
 
 type Props = {
@@ -34,6 +36,15 @@ type Props = {
   onOpenSettings: () => void;
   recordRequest: number;
 };
+
+function shareListText(memos: Memo[]): string {
+  return memos
+    .flatMap((memo) => {
+      const transcript = memo.status === 'ready' ? (memo.transcript?.trim() ?? '') : '';
+      return transcript ? [`${formatTime(memo.createdAt)}\n${transcript}`] : [];
+    })
+    .join('\n\n');
+}
 
 export default function Home({ focusedMemoId, onOpenSettings, recordRequest }: Props) {
   const recorder = useRecorder();
@@ -291,20 +302,37 @@ export default function Home({ focusedMemoId, onOpenSettings, recordRequest }: P
     await publishLatestMemo();
   }
 
+  const sharedText = shareListText(memos);
+
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <Text style={styles.title}>Memoroku</Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="設定"
-            onPress={onOpenSettings}
-            style={styles.settingsButton}
-          >
-            <Settings color={colors.accent} size={16} strokeWidth={2.25} />
-            <Text style={styles.settings}>設定</Text>
-          </Pressable>
+          <View style={styles.headerActions}>
+            {sharedText ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="共有"
+                onPress={() => {
+                  Share.share({ message: sharedText }).catch(() => undefined);
+                }}
+                style={styles.settingsButton}
+              >
+                <Share2 color={colors.accent} size={16} strokeWidth={2.25} />
+                <Text style={styles.settings}>共有</Text>
+              </Pressable>
+            ) : null}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="設定"
+              onPress={onOpenSettings}
+              style={styles.settingsButton}
+            >
+              <Settings color={colors.accent} size={16} strokeWidth={2.25} />
+              <Text style={styles.settings}>設定</Text>
+            </Pressable>
+          </View>
         </View>
         <Text style={styles.subtitle}>通常のメモは24時間で消えます。</Text>
         {configured ? null : (
@@ -425,6 +453,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
   },
   title: {
     color: colors.text,
