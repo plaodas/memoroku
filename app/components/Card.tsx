@@ -9,6 +9,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   View,
   type PanResponderGestureState,
 } from 'react-native';
@@ -18,7 +19,6 @@ import { colors } from '../theme';
 import { formatDuration, formatTime } from '../utils/formatTime';
 
 type Props = {
-  title: string;
   createdAt: number;
   durationMs: number;
   status: MemoStatus;
@@ -31,6 +31,9 @@ type Props = {
   kept: boolean;
   onSelect: () => void;
   focused?: boolean;
+  editing?: boolean;
+  onStartEdit?: () => void;
+  onCommit?: (text: string) => void;
 };
 
 const REVEAL = 88;
@@ -41,14 +44,6 @@ const STATUS_LABEL: Record<Exclude<MemoStatus, 'ready'>, string> = {
   transcribing: '文字起こし中',
   failed: '文字起こしに失敗しました',
 };
-
-function compactLine(value: string): string {
-  return value.replace(/\s+/g, ' ').trim().replace(/[。！？.!?…]+$/u, '');
-}
-
-function sameLine(left: string, right: string): boolean {
-  return compactLine(left) === compactLine(right);
-}
 
 const closers = new Set<() => void>();
 
@@ -75,7 +70,6 @@ function isLeftSwipe(gesture: PanResponderGestureState, opened: boolean): boolea
 }
 
 export function Card({
-  title,
   createdAt,
   durationMs,
   status,
@@ -88,10 +82,20 @@ export function Card({
   kept,
   onSelect,
   focused,
+  editing = false,
+  onStartEdit,
+  onCommit,
 }: Props) {
-  const heading = status === 'transcribing' ? STATUS_LABEL.transcribing : title;
-  const detail = status === 'ready' ? transcript : STATUS_LABEL[status];
-  const showDetail = Boolean(detail && !sameLine(heading, detail));
+  const canEdit = status === 'ready' || status === 'failed';
+  const text = status === 'ready' ? (transcript ?? '') : STATUS_LABEL[status];
+  const onCommitRef = useRef(onCommit);
+  const committed = useRef(false);
+  const wasEditing = useRef(false);
+  onCommitRef.current = onCommit;
+  if (editing && !wasEditing.current) {
+    committed.current = false;
+  }
+  wasEditing.current = editing;
   const translateX = useRef(new Animated.Value(0)).current;
   const offset = useRef(0);
   const width = useRef(0);
@@ -135,6 +139,13 @@ export function Card({
     opened.current = false;
     setRevealed(false);
   }, [createdAt, translateX]);
+
+  useEffect(() => {
+    if (!editing) {
+      return;
+    }
+    closeSelf.current();
+  }, [editing]);
 
   const swipe = useRef<SwipeHandlers>({
     shouldSwipe: () => false,
@@ -203,6 +214,23 @@ export function Card({
     }),
   ).current;
 
+  function onPressText() {
+    onSelect();
+    if (!canEdit) {
+      return;
+    }
+    closeSwipedCards();
+    onStartEdit?.();
+  }
+
+  function commitDraft(text: string) {
+    if (committed.current) {
+      return;
+    }
+    committed.current = true;
+    onCommitRef.current?.(text);
+  }
+
   return (
     <View style={styles.shadow}>
       <View
@@ -227,10 +255,37 @@ export function Card({
             <Text style={styles.deleteText}>削除</Text>
           </Pressable>
         </View>
-        <Animated.View style={{ transform: [{ translateX }] }} {...pan.panHandlers}>
-          <Pressable onPress={onSelect} style={styles.card}>
+        <Animated.View
+          style={{ transform: [{ translateX }] }}
+          {...(editing ? {} : pan.panHandlers)}
+        >
+          <View style={styles.card}>
             <View style={styles.titleRow}>
-              <Text style={styles.title}>{heading}</Text>
+              {editing ? (
+                <TextInput
+                  accessibilityLabel="文を編集"
+                  autoFocus
+                  multiline
+                  scrollEnabled={false}
+                  underlineColorAndroid="transparent"
+                  placeholder="聞こえた文を入れる"
+                  placeholderTextColor={colors.muted}
+                  defaultValue={transcript ?? ''}
+                  onEndEditing={(event) => {
+                    commitDraft(event.nativeEvent.text);
+                  }}
+                  style={styles.input}
+                />
+              ) : (
+                <Pressable
+                  accessibilityRole={canEdit ? 'button' : undefined}
+                  accessibilityLabel={canEdit ? '文を編集' : undefined}
+                  onPress={onPressText}
+                  style={styles.textHit}
+                >
+                  <Text style={styles.memo}>{text}</Text>
+                </Pressable>
+              )}
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="残す"
@@ -247,7 +302,6 @@ export function Card({
                 />
               </Pressable>
             </View>
-            {showDetail ? <Text style={styles.body}>{detail}</Text> : null}
             <View style={styles.footer}>
               <View style={styles.actions}>
                 {audioUri ? (
@@ -269,11 +323,13 @@ export function Card({
                   onPress={onDelete}
                 />
               </View>
-              <Text style={styles.meta} numberOfLines={1}>
-                {formatTime(createdAt)} · {formatDuration(durationMs)}
-              </Text>
+              <Pressable onPress={onSelect} style={styles.metaHit}>
+                <Text style={styles.meta} numberOfLines={1}>
+                  {formatTime(createdAt)} · {formatDuration(durationMs)}
+                </Text>
+              </Pressable>
             </View>
-          </Pressable>
+          </View>
         </Animated.View>
       </View>
     </View>
@@ -350,19 +406,27 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 8,
   },
-  title: {
+  textHit: {
+    flex: 1,
+  },
+  memo: {
+    color: colors.text,
+    fontSize: 17,
+    fontWeight: '600',
+    lineHeight: 24,
+  },
+  input: {
     flex: 1,
     color: colors.text,
     fontSize: 17,
     fontWeight: '600',
+    lineHeight: 24,
+    padding: 0,
+    margin: 0,
+    textAlignVertical: 'top',
   },
   keep: {
     marginTop: 1,
-  },
-  body: {
-    color: colors.text,
-    fontSize: 15,
-    lineHeight: 22,
   },
   footer: {
     flexDirection: 'row',
@@ -385,10 +449,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
   },
+  metaHit: {
+    flexShrink: 1,
+  },
   meta: {
     color: colors.muted,
     fontSize: 13,
-    flexShrink: 1,
     textAlign: 'right',
   },
 });

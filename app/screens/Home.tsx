@@ -22,6 +22,7 @@ import {
   getMemos,
   setMemoKept,
   subscribeMemos,
+  updateMemo,
   type Memo,
 } from '../storage/memos';
 import { transcribeMemo } from '../transcription/pipeline';
@@ -44,6 +45,7 @@ export default function Home({ focusedMemoId, onOpenSettings, recordRequest }: P
   const [holdMode, setHoldMode] = useState(false);
   const [micAllowed, setMicAllowed] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(focusedMemoId);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [shortcutRecording, setShortcutRecording] = useState(false);
   const [hintSeen, setHintSeen] = useState<boolean | null>(null);
   const savedHold = useRef<boolean | null>(null);
@@ -270,6 +272,25 @@ export default function Home({ focusedMemoId, onOpenSettings, recordRequest }: P
     await publishLatestMemo();
   }
 
+  function onStartEdit(memoId: string) {
+    closeSwipedCards();
+    setSelectedId(memoId);
+    setEditingId(memoId);
+  }
+
+  async function onCommitTranscript(memo: Memo, text: string) {
+    setEditingId((current) => (current === memo.id ? null : current));
+    const next = text.trim();
+    if (!next || next === (memo.transcript ?? '').trim()) {
+      return;
+    }
+    await updateMemo(memo.id, {
+      status: 'ready',
+      transcript: next,
+    });
+    await publishLatestMemo();
+  }
+
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
@@ -293,7 +314,10 @@ export default function Home({ focusedMemoId, onOpenSettings, recordRequest }: P
       <FlatList
         ref={listRef}
         data={memos}
-        extraData={selectedId}
+        extraData={`${selectedId ?? ''}:${editingId ?? ''}`}
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
+        keyboardDismissMode="on-drag"
         onScrollToIndexFailed={(info) => {
           listRef.current?.scrollToOffset({
             offset: info.averageItemLength * info.index,
@@ -311,7 +335,6 @@ export default function Home({ focusedMemoId, onOpenSettings, recordRequest }: P
         renderItem={({ item, index }) => (
           <FadeIn delay={index * 40}>
             <Card
-              title={item.title}
               createdAt={item.createdAt}
               durationMs={item.durationMs}
               status={item.status}
@@ -336,6 +359,11 @@ export default function Home({ focusedMemoId, onOpenSettings, recordRequest }: P
               }}
               onSelect={() => setSelectedId(item.id)}
               focused={item.id === selectedId}
+              editing={item.id === editingId}
+              onStartEdit={() => onStartEdit(item.id)}
+              onCommit={(text) => {
+                onCommitTranscript(item, text).catch(() => undefined);
+              }}
             />
           </FadeIn>
         )}

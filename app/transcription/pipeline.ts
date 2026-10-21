@@ -42,11 +42,6 @@ async function uploadUntilAccepted(fileUri: string, memoId: string): Promise<str
   }
 }
 
-function titleFromSentence(sentence: string): string {
-  const stripped = sentence.replace(/[。！？.!?…]+$/u, '').trim();
-  return stripped.slice(0, 40) || '音声メモ';
-}
-
 async function finish(memoId: string, transcript: string): Promise<void> {
   const current = await getMemo(memoId);
   if (!current) {
@@ -57,7 +52,6 @@ async function finish(memoId: string, transcript: string): Promise<void> {
   await updateMemo(memoId, {
     status: 'ready',
     transcript,
-    title: titleFromSentence(sentence),
   });
   const saved = await getMemo(memoId);
   if (!saved) {
@@ -65,7 +59,7 @@ async function finish(memoId: string, transcript: string): Promise<void> {
     return;
   }
   await publishLatestMemo();
-  await notifyMemoReady(memoId, sentence || titleFromSentence(sentence));
+  await notifyMemoReady(memoId, sentence || '音声メモ');
 }
 
 async function run(memoId: string): Promise<void> {
