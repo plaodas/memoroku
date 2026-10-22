@@ -27,6 +27,7 @@ type Props = {
   playing: boolean;
   onTogglePlay: () => void;
   onDelete: () => void;
+  onDeleteNow: () => void;
   onToggleKeep: () => void;
   kept: boolean;
   onSelect: () => void;
@@ -78,6 +79,7 @@ export function Card({
   playing,
   onTogglePlay,
   onDelete,
+  onDeleteNow,
   onToggleKeep,
   kept,
   onSelect,
@@ -102,9 +104,8 @@ export function Card({
   const dragging = useRef(false);
   const tracking = useRef(false);
   const opened = useRef(false);
-  const onDeleteRef = useRef(onDelete);
+  const inputRef = useRef<TextInput>(null);
   const [revealed, setRevealed] = useState(false);
-  onDeleteRef.current = onDelete;
 
   function snap(to: number) {
     offset.current = to;
@@ -188,7 +189,7 @@ export function Card({
       const keepOpen = next <= -REVEAL / 2 || (gesture.vx <= -0.5 && next < -24);
       if (deep) {
         snap(-REVEAL);
-        onDeleteRef.current();
+        onDeleteNow();
         return;
       }
       snap(keepOpen ? -REVEAL : 0);
@@ -248,7 +249,7 @@ export function Card({
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="削除"
-            onPress={onDelete}
+            onPress={onDeleteNow}
             style={styles.deleteHit}
           >
             <Trash2 color="#ffffff" size={16} strokeWidth={2.25} />
@@ -263,14 +264,20 @@ export function Card({
             <View style={styles.titleRow}>
               {editing ? (
                 <TextInput
+                  ref={inputRef}
                   accessibilityLabel="文を編集"
                   autoFocus
                   multiline
+                  blurOnSubmit
+                  returnKeyType="done"
                   scrollEnabled={false}
                   underlineColorAndroid="transparent"
                   placeholder="聞こえた文を入れる"
                   placeholderTextColor={colors.muted}
                   defaultValue={transcript ?? ''}
+                  onSubmitEditing={() => {
+                    inputRef.current?.blur();
+                  }}
                   onEndEditing={(event) => {
                     commitDraft(event.nativeEvent.text);
                   }}

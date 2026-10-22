@@ -380,6 +380,10 @@ export default function Home({ focusedMemoId, onOpenSettings, recordRequest }: P
                 setSelectedId(item.id);
                 confirmDelete(item);
               }}
+              onDeleteNow={() => {
+                setSelectedId(item.id);
+                onDelete(item).catch(() => undefined);
+              }}
               kept={item.expiresAt === null}
               onToggleKeep={() => {
                 setSelectedId(item.id);
