@@ -25,6 +25,7 @@ export default function Settings({ onClose }: Props) {
   const [token, setToken] = useState('');
   const [mode, setMode] = useState<TranscriptionMode>('minutes');
   const [modelReady, setModelReady] = useState(false);
+  const [awaitingDownload, setAwaitingDownload] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [progress, setProgress] = useState<number | null>(null);
   const [revealed, setRevealed] = useState(false);
@@ -69,13 +70,21 @@ export default function Settings({ onClose }: Props) {
     setPreview(false);
   }
 
-  async function onSelectDevice() {
+  function onSelectDevice() {
     setError(null);
-    setMode('device');
     if (whisperModelReady()) {
+      setMode('device');
       setModelReady(true);
+      setAwaitingDownload(false);
       return;
     }
+    setAwaitingDownload(true);
+  }
+
+  async function onStartDownload() {
+    setError(null);
+    setMode('device');
+    setAwaitingDownload(false);
     const controller = new AbortController();
     downloadAbort.current?.abort();
     downloadAbort.current = controller;
@@ -92,6 +101,7 @@ export default function Settings({ onClose }: Props) {
       }
       setMode('minutes');
       setModelReady(false);
+      setAwaitingDownload(true);
       setError(cause instanceof Error ? cause.message : 'モデルを取得できませんでした。');
     } finally {
       setDownloading(false);
@@ -105,6 +115,7 @@ export default function Settings({ onClose }: Props) {
     downloadAbort.current?.abort();
     setMode('minutes');
     setDownloading(false);
+    setAwaitingDownload(false);
   }
 
   async function onSave() {
@@ -146,9 +157,7 @@ export default function Settings({ onClose }: Props) {
         <Pressable
           accessibilityRole="button"
           disabled={downloading}
-          onPress={() => {
-            onSelectDevice().catch(() => undefined);
-          }}
+          onPress={onSelectDevice}
           style={[styles.mode, mode === 'device' ? styles.modeSelected : null]}
         >
           <Text style={[styles.modeLabel, mode === 'device' ? styles.modeLabelSelected : null]}>
@@ -166,6 +175,21 @@ export default function Settings({ onClose }: Props) {
           <View style={styles.progressTrack}>
             <View style={[styles.progressFill, { width: `${Math.round((progress ?? 0) * 100)}%` }]} />
           </View>
+        </View>
+      ) : awaitingDownload ? (
+        <View style={styles.downloadOffer}>
+          <Text style={styles.downloadNote}>
+            初回は約150MBのモデルを取得します。この画面を閉じると中断します。
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              onStartDownload().catch(() => undefined);
+            }}
+            style={styles.downloadButton}
+          >
+            <Text style={styles.downloadButtonLabel}>取得する</Text>
+          </Pressable>
         </View>
       ) : mode === 'device' && modelReady ? (
         <Text style={styles.modelReady}>多言語 Base を端末に保存しました。</Text>
@@ -304,6 +328,27 @@ const styles = StyleSheet.create({
   progressFill: {
     height: 6,
     backgroundColor: colors.accent,
+  },
+  downloadOffer: {
+    gap: 12,
+    marginBottom: 20,
+  },
+  downloadNote: {
+    color: colors.text,
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  downloadButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.accent,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  downloadButtonLabel: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   modelReady: {
     color: colors.muted,
